@@ -10,10 +10,9 @@ function MainScreen() {
       try {
         const response = await fetch("http://127.0.0.1:5000/api/species");
         const result = await response.json();
-        setSpeciesData(result);
-
-        if (result.length > 0) {
-          fetchFactsData(result[0].name);
+        if (result) {
+          setSpeciesData([result]);
+          fetchFactsData(result.name);
         }
       } catch (error) {
         console.error("Error fetching species data:", error);

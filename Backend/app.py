@@ -18,7 +18,7 @@ speciesdata = db["basespeciesdata"]
 @app.route("/api/species", methods=["GET"])
 def get_species():
     try:
-        data = list(collection.find({}, {"_id": 0}))
+        data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -36,7 +36,7 @@ def get_data():
     try:
         source = request.args.get("source", "species")
         if source == "species":
-            data = list(collection.find({}, {"_id": 0}))
+             data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
         elif source == "speciesdata":
             data = list(speciesdata.find({}, {"_id": 0}))
         else:
