@@ -109,14 +109,22 @@ function MainScreen() {
                 <strong>Light Level:</strong>{" "}
                 {speciesData[0].light || "No Data Found"}
                 <br />
-                <strong>Heat:</strong> {speciesData[0].heat || "No Data Found"}
+                <strong>Heat:</strong>{" "}
+                {speciesData[0].longitude || "No Data Found"}
+                <br />
+                <strong>Latitude:</strong>{" "}
+                {speciesData[0].latitude || "No Data Found"}
+                <br />
+                <strong>Longitude:</strong>{" "}
+                {speciesData[0].longitude || "No Data Found"}
+                <br />
               </li>
             ) : (
               <p>No data available</p>
             )}
           </ul>
           <button
-            className="mt-6 px-4 py-2 bg-[#023d1c] text-white rounded-md self-end"
+            className="mt-6 px-6 py-4 bg-[#023d1c] text-white rounded-md self-center"
             onClick={handleShowFactsToggle}
           >
             Show {showFacts ? "Species Information" : "Common Facts"}
