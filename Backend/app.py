@@ -4,32 +4,50 @@ from pymongo import MongoClient
 import os
 
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing for frontend requests
+CORS(app)
 
-# MongoDB configuration
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://<username>:<password>@cluster.mongodb.net/mydatabase")
+MONGO_URI = os.getenv(
+    "MONGO_URI",
+    "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB",
+)
 client = MongoClient(MONGO_URI)
-db = client["insect_identification"]  # Replace with your database name
-collection = db["species"]  # Replace with your collection name
+db = client["insect_identification"]
+collection = db["species"]
+speciesdata = db["basespeciesdata"]
 
-@app.route("/api/data", methods=["GET"])
-def get_data():
-    """Fetch all data from the MongoDB collection."""
+@app.route("/api/species", methods=["GET"])
+def get_species():
     try:
-        data = list(collection.find({}, {"_id": 0}))  # Exclude MongoDB's ObjectId field
+        data = list(collection.find({}, {"_id": 0}))
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/data", methods=["POST"])
-def add_data():
-    """Insert new data into the MongoDB collection."""
+@app.route("/api/speciesdata", methods=["GET"])
+def get_speciesdata():
     try:
-        new_data = request.json
-        collection.insert_one(new_data)
-        return jsonify({"message": "Data added successfully"}), 201
+        data = list(speciesdata.find({}, {"_id": 0})) 
+        return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/data", methods=["GET"])
+def get_data():
+    try:
+        source = request.args.get("source", "species")
+        if source == "species":
+            data = list(collection.find({}, {"_id": 0}))
+        elif source == "speciesdata":
+            data = list(speciesdata.find({}, {"_id": 0}))
+        else:
+            return jsonify({"error": "Invalid source parameter"}), 400
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Welcome to the Insect Identification API", 200
 
 if __name__ == "__main__":
     app.run(debug=True)

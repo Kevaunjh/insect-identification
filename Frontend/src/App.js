@@ -1,10 +1,11 @@
 import React from "react";
-import DisplayData from "./components/DisplayData";
+import MainScreen from "./components/MainScreen";
+import "./index.css";
 
 function App() {
   return (
-    <div className="App">
-      <DisplayData />
+    <div>
+      <MainScreen />
     </div>
   );
 }
