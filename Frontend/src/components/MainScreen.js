@@ -79,7 +79,7 @@ function MainScreen() {
   return (
     <div
       className={`h-screen w-screen ${
-        darkMode ? "bg-zinc-800 text-zinc-200" : "bg-white text-zinc-800"
+        darkMode ? "bg-zinc-800 text-zinc-200" : "bg-zinc-100 text-zinc-800"
       }`}
     >
       <div
@@ -121,7 +121,7 @@ function MainScreen() {
         {sidebarOpen && (
           <div
             className={`w-72 h-full bg-gray-200 p-2 ${
-              darkMode ? "bg-zinc-700" : "bg-white"
+              darkMode ? "bg-zinc-800" : "bg-zinc-100"
             } shadow-lg`}
           >
             <ul className="space-y-6">
@@ -156,8 +156,8 @@ function MainScreen() {
               darkMode ? "bg-zinc-700" : "bg-white"
             }`}
           >
-            <div className="w-3/4 h-3/4 border border-gray-200 rounded-md overflow-hidden flex flex-col items-center justify-center">
-              <div className="w-full h-3/4 bg-gray-100 flex items-center justify-center">
+            <div className={`w-3/4 h-3/4 border rounded-md overflow-hidden flex flex-col items-center justify-center ${darkMode ? "border-zinc-800" : "border-zinc-100"}`}>
+              <div className={`w-full h-3/4 flex items-center justify-center ${darkMode ? "bg-zinc-800" : "bg-zinc-100"}`}>
                 {speciesData.length > 0 && speciesData[0]?.image ? (
                   <img
                     src={`data:image/jpeg;base64,${speciesData[0].image}`}
@@ -165,15 +165,20 @@ function MainScreen() {
                     className="h-full object-contain"
                   />
                 ) : (
-                  <p className="text-gray-400">No Data Found</p>
+                  <p className={`${darkMode ? "text-zinc-200" : "text-zinc-800"}`}>No Data Found</p>
                 )}
               </div>
-              <div className="w-full h-1/4 bg-gray-200 flex flex-col items-center justify-center">
+              <div className={`w-full h-1/4 flex flex-col items-center justify-center ${darkMode ? "bg-zinc-900" : "bg-zinc-200"}`}>
                 <h2 className="text-xl font-bold text-center">
                   {speciesData.length > 0
                     ? speciesData[0]?.name || "No Data Found"
                     : "No Data Found"}
                 </h2>
+                <p className="text-sm text-center">
+                  {speciesData.length > 0
+                    ? `Confidence: ${speciesData[0]?.confidence}%` || "No Data Found"
+                    : "No Data Found"}
+                </p>
               </div>
             </div>
             <button
@@ -235,9 +240,6 @@ function MainScreen() {
                   <br />
                   <strong>Longitude:</strong>{" "}
                   {speciesData[0].longitude || "No Data Found"}
-                  <br />
-                  <strong>Confidence:</strong>{" "}
-                  {speciesData[0].confidence + "%" || "No Data Found"}
                   <br />
                 </li>
               ) : (
