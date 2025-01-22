@@ -48,4 +48,7 @@ Ensure you have the following installed:
    ```bash
    wget https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt
    ```
-
+---
+## Starting the Website
+Open two terminals. <br> In terminal #1: <br> ```cd .\Frontend ```<br> ```npm install```<br>```npm run start```<br><br>
+In terminal #2: <br> ```cd .\Backend```<br>```pip install -r requirements.txt```<br>```python app.py```
