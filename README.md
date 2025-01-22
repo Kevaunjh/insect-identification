@@ -38,12 +38,12 @@ Ensure you have the following installed:
 3. **Set Up MongoDB**  
    - Use a MongoDB Atlas cluster or a local MongoDB instance.
    - Update the connection URI in the Python code to match your MongoDB setup:
-     ```python
-     uri = "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
-     ```
+   ```python
+   uri = "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
+   ```
 
 4. **Download YOLOv5 Weights**<br>
-   *In this repository we already provide the latest trained weights we've used.*<br>
+   *In this repository we already provide the latest trained weights we've used. In backend folder, file named: ```best.pt```*<br>
    Download the pre-trained YOLOv5 weights (e.g., `yolov5s.pt`) and place them in the project directory:
    ```bash
    wget https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt
