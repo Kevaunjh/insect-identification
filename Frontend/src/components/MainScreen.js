@@ -78,12 +78,12 @@ function MainScreen() {
 
   return (
     <div
-      className={`h-screen w-screen ${
+      className={`h-screen w-screen transition-colors duration-500 ${
         darkMode ? "bg-zinc-800 text-zinc-200" : "bg-zinc-100 text-zinc-800"
       }`}
     >
       <div
-        className={`w-screen h-16 flex justify-between items-center pl-6 pr-2 text-2xl shadow ${
+        className={`w-screen h-16 flex justify-between items-center pl-6 pr-2 text-2xl shadow transition-colors duration-500 ${
           darkMode ? "bg-green text-light-green" : "bg-light-green text-green"
         }`}
       >
@@ -118,13 +118,15 @@ function MainScreen() {
       </div>
 
       <div className="flex w-screen h-[calc(100vh-4rem)]">
-        {sidebarOpen && (
-          <div
-            className={`w-72 h-full bg-gray-200 p-2 ${
-              darkMode ? "bg-zinc-800" : "bg-zinc-100"
-            } shadow-lg`}
-          >
-            <ul className="space-y-6">
+        <div
+          className={`transition-all duration-500 ${
+            sidebarOpen ? "w-72" : "w-0"
+          } h-full bg-gray-200 ${
+            darkMode ? "bg-zinc-800" : "bg-zinc-100"
+          } shadow-lg overflow-hidden`}
+        >
+          {sidebarOpen && (
+            <ul className="space-y-6 p-2">
               <li
                 className={`flex items-center cursor-pointer ${
                   darkMode
@@ -147,17 +149,17 @@ function MainScreen() {
                 <FaArchive className="mr-8 text-2xl" /> Archive
               </li>
             </ul>
-          </div>
-        )}
+          )}
+        </div>
         <div className="flex-grow flex  px-4 py-4 gap-4">
           <div
             id="leftside"
-            className={`w-2/3 flex items-center justify-center flex-col shadow rounded p-4 ${
+            className={`w-2/3 flex items-center justify-center flex-col shadow rounded p-4 transition-colors duration-500 ${
               darkMode ? "bg-zinc-700" : "bg-white"
             }`}
           >
-            <div className={`w-3/4 h-3/4 border rounded-md overflow-hidden flex flex-col items-center justify-center ${darkMode ? "border-zinc-800" : "border-zinc-100"}`}>
-              <div className={`w-full h-3/4 flex items-center justify-center ${darkMode ? "bg-zinc-800" : "bg-zinc-100"}`}>
+            <div className={`w-3/4 h-3/4 border rounded-md overflow-hidden flex flex-col items-center justify-center transition-colors duration-500 ${darkMode ? "border-zinc-800" : "border-zinc-100"}`}>
+              <div className={`w-full h-3/4 flex items-center justify-center transition-colors duration-500 ${darkMode ? "bg-zinc-800" : "bg-zinc-100"}`}>
                 {speciesData.length > 0 && speciesData[0]?.image ? (
                   <img
                     src={`data:image/jpeg;base64,${speciesData[0].image}`}
@@ -168,7 +170,7 @@ function MainScreen() {
                   <p className={`${darkMode ? "text-zinc-200" : "text-zinc-800"}`}>No Data Found</p>
                 )}
               </div>
-              <div className={`w-full h-1/4 flex flex-col items-center justify-center ${darkMode ? "bg-zinc-900" : "bg-zinc-200"}`}>
+              <div className={`w-full h-1/4 flex flex-col items-center justify-center transition-colors duration-500 ${darkMode ? "bg-zinc-900" : "bg-zinc-200"}`}>
                 <h2 className="text-xl font-bold text-center">
                   {speciesData.length > 0
                     ? speciesData[0]?.name || "No Data Found"
@@ -182,7 +184,7 @@ function MainScreen() {
               </div>
             </div>
             <button
-              className={`mt-6 px-6 py-4 rounded-md self-center ${
+              className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
                 darkMode
                   ? "bg-green text-light-green"
                   : "bg-light-green text-green"
@@ -195,7 +197,7 @@ function MainScreen() {
 
           <div
             id="rightside"
-            className={`w-1/3 flex flex-col items-center shadow rounded p-6 justify-center ${
+            className={`w-1/3 flex flex-col items-center shadow rounded p-6 justify-center transition-colors duration-500 ${
               darkMode ? "bg-zinc-700" : "bg-white"
             }`}
           >
@@ -247,7 +249,7 @@ function MainScreen() {
               )}
             </ul>
             <button
-              className={`mt-6 px-6 py-4 rounded-md self-center ${
+              className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
                 darkMode
                   ? "bg-green text-light-green"
                   : "bg-light-green text-green"
