@@ -5,34 +5,39 @@ function MainScreen() {
   const [factsData, setFactsData] = useState(null);
   const [showFacts, setShowFacts] = useState(false);
 
+  const fetchSpeciesData = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/species");
+      const result = await response.json();
+      if (result) {
+        setSpeciesData([result]);
+        fetchFactsData(result.name);
+      }
+    } catch (error) {
+      console.error("Error fetching species data:", error);
+    }
+  };
+
+  const fetchFactsData = async (speciesName) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/speciesdata");
+      const result = await response.json();
+      const matchedFacts = result.find(
+        (item) => item.speciesName === speciesName
+      );
+      setFactsData(matchedFacts || null);
+    } catch (error) {
+      console.error("Error fetching facts data:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchSpeciesData = async () => {
-      try {
-        const response = await fetch("http://127.0.0.1:5000/api/species");
-        const result = await response.json();
-        if (result) {
-          setSpeciesData([result]);
-          fetchFactsData(result.name);
-        }
-      } catch (error) {
-        console.error("Error fetching species data:", error);
-      }
-    };
-
-    const fetchFactsData = async (speciesName) => {
-      try {
-        const response = await fetch("http://127.0.0.1:5000/api/speciesdata");
-        const result = await response.json();
-        const matchedFacts = result.find(
-          (item) => item.speciesName === speciesName
-        );
-        setFactsData(matchedFacts || null);
-      } catch (error) {
-        console.error("Error fetching facts data:", error);
-      }
-    };
-
     fetchSpeciesData();
+    const interval = setInterval(() => {
+      fetchSpeciesData();
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleShowFactsToggle = () => {
@@ -54,8 +59,8 @@ function MainScreen() {
             <div className="w-full h-3/4 bg-gray-100 flex items-center justify-center">
               {speciesData.length > 0 && speciesData[0]?.image ? (
                 <img
-                  src={speciesData[0].image}
-                  alt={speciesData[0].name}
+                  src={`data:image/jpeg;base64,${speciesData[0].image}`}
+                  alt={speciesData[0].name || "Insect Image"}
                   className="h-full object-contain"
                 />
               ) : (
@@ -108,14 +113,16 @@ function MainScreen() {
                 <strong>Light Level:</strong>{" "}
                 {speciesData[0].light || "No Data Found"}
                 <br />
-                <strong>Heat:</strong>{" "}
-                {speciesData[0].longitude || "No Data Found"}
+                <strong>Heat:</strong> {speciesData[0].heat || "No Data Found"}
                 <br />
                 <strong>Latitude:</strong>{" "}
                 {speciesData[0].latitude || "No Data Found"}
                 <br />
                 <strong>Longitude:</strong>{" "}
                 {speciesData[0].longitude || "No Data Found"}
+                <br />
+                <strong>Confidence:</strong>{" "}
+                {speciesData[0].confidence + "%" || "No Data Found"}
                 <br />
               </li>
             ) : (
