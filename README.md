@@ -42,8 +42,8 @@ Ensure you have the following installed:
      uri = "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
      ```
 
-4. **Download YOLOv5 Weights**
-   *In this repository we already provide the latest trained waits we've used.*
+4. **Download YOLOv5 Weights**<br>
+   *In this repository we already provide the latest trained weights we've used.*
    Download the pre-trained YOLOv5 weights (e.g., `yolov5s.pt`) and place them in the project directory:
    ```bash
    wget https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt
