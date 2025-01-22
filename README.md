@@ -43,7 +43,7 @@ Ensure you have the following installed:
      ```
 
 4. **Download YOLOv5 Weights**<br>
-   *In this repository we already provide the latest trained weights we've used.*
+   *In this repository we already provide the latest trained weights we've used.*<br>
    Download the pre-trained YOLOv5 weights (e.g., `yolov5s.pt`) and place them in the project directory:
    ```bash
    wget https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt
