@@ -1,3 +1,21 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+/* ADD MORE CLASSES HERE IF NECESSARY */
+
+.bg-light-green {
+  background-color: #effde4;
+}
+
+.bg-green {
+  background-color: #023d1c;
+}
+
+.text-light-green {
+    color: #effde4;
+}
+
+.text-green {
+    color: #023d1c;
+}
