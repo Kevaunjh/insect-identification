@@ -50,5 +50,15 @@ Ensure you have the following installed:
    ```
 ---
 ## Starting the Website
-Open two terminals. <br> In terminal #1: <br> ```cd .\Frontend ```<br> ```npm install```<br>```npm run start```<br><br>
-In terminal #2: <br> ```cd .\Backend```<br>```pip install -r requirements.txt```<br>```python app.py```
+Open two terminals. <br> In terminal #1:
+```bash
+cd .\Frontend
+npm install
+npm run start
+```
+In terminal #2:
+```bash
+cd .\Backend
+pip install -r requirements.txt
+python app.py
+```
