@@ -74,7 +74,7 @@ function Home({}) {
                 <img
                   src={`data:image/jpeg;base64,${speciesData[0].image}`}
                   alt={speciesData[0].name || "Insect Image"}
-                  className="object-contain w-2/5 "
+                  className="object-contain w-3/5 "
                 />
               ) : (
                 <p
@@ -104,16 +104,6 @@ function Home({}) {
               </p>
             </div>
           </div>
-          <button
-            className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
-              darkMode
-                ? "bg-green text-light-green"
-                : "bg-light-green text-green"
-            }`}
-            onClick={handleNextImage}
-          >
-            View More Images
-          </button>
         </div>
 
         <div

@@ -15,11 +15,30 @@ db = client["insect_identification"]
 collection = db["species"]
 speciesdata = db["basespeciesdata"]
 existingspecies = db["existingspecies"]
+alldata = db["species"]
+speciesinfo = db["speciesinfo"]
 
 @app.route("/api/species", methods=["GET"])
 def get_species():
     try:
         data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/alldata", methods=["GET"])
+def get_alldata():
+    try:
+        data = list(collection.find({}, {"_id": 0}).sort("_id", -1))
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    
+@app.route("/api/speciesinfo", methods=["GET"])
+def get_speciesinfo():
+    try:
+        data = list(speciesinfo.find({}, {"_id": 0})) 
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -50,6 +69,8 @@ def get_data():
             data = list(speciesdata.find({}, {"_id": 0}))
         elif source == "exisitingspecies":
             data = list(speciesdata.find({}, {"_id": 0}))
+        elif source == "speciesinfo":
+            data = list(speciesinfo.find({}, {"_id": 0}))
         else:
             return jsonify({"error": "Invalid source parameter"}), 400
         return jsonify(data), 200

@@ -13,9 +13,27 @@
 }
 
 .text-light-green {
-    color: #effde4;
+  color: #effde4;
 }
 
 .text-green {
-    color: #023d1c;
+  color: #023d1c;
+}
+
+.custom-scrollbar {
+  /* Hide scrollbar for WebKit browsers */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+}
+
+/* For WebKit browsers (Chrome, Safari, and Opera) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 0; /* Hide vertical scrollbar */
+  height: 0; /* Hide horizontal scrollbar */
+}
+
+/* Optional: Hide scrollbars for specific elements */
+.custom-scrollbar::-webkit-scrollbar {
+  display: none; /* Hide scrollbars */
 }

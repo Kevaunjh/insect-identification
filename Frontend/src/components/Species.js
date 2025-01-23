@@ -1,17 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
+import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
 
-function Species({}) {
+function Species() {
   const { darkMode } = useContext(DarkModeContext);
   const [existingSpeciesData, setExistingSpeciesData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSpecies, setSelectedSpecies] = useState(null);
 
   useEffect(() => {
     const fetchSpeciesData = async () => {
       try {
-        const response = await fetch(
-          "http://127.0.0.1:5000/api/existingspecies"
-        );
+        const response = await fetch("http://127.0.0.1:5000/api/speciesinfo");
         const result = await response.json();
         if (result) {
           setExistingSpeciesData(result);
@@ -26,9 +26,17 @@ function Species({}) {
     fetchSpeciesData();
   }, []);
 
+  const openModal = (species) => {
+    setSelectedSpecies(species);
+  };
+
+  const closeModal = () => {
+    setSelectedSpecies(null);
+  };
+
   return (
     <div
-      className={`flex flex-col items-center min-h-[calc(100vh-4rem)] w-full transition-colors duration-500 ${
+      className={`flex flex-col items-center min-h-[calc(100vh-4rem)] w-full transition-colors duration-500 custom-scrollbar ${
         darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
       }`}
     >
@@ -49,18 +57,15 @@ function Species({}) {
             existingSpeciesData.map((species, index) => (
               <div
                 key={index}
-                className={`flex flex-col items-center p-4 border rounded-lg shadow-md transition-colors duration-500 ${
+                className={`flex flex-col items-center p-4 border rounded-lg shadow-md transition-colors duration-500 cursor-pointer ${
                   darkMode
                     ? "bg-zinc-700 text-white border-zinc-600 hover:bg-slate-800"
                     : "bg-white text-black border-gray-300 hover:bg-gray-200"
                 }`}
+                onClick={() => openModal(species)}
               >
                 <div
-                  className={`w-full h-64 bg-gray-300 rounded-md mb-4 flex items-center justify-center overflow-hidden" ${
-                    darkMode
-                      ? "#3a3a3a hover:bg-slate-800"
-                      : "#e2e2e2 hover:bg-gray-200"
-                  }`}
+                  className={`w-full h-64 bg-gray-300 rounded-md mb-4 flex items-center justify-center overflow-hidden"`}
                 >
                   {species.image ? (
                     <img
@@ -79,6 +84,75 @@ function Species({}) {
             <p>No species data available.</p>
           )}
         </div>
+      )}
+
+      {/* Modal for showing species details */}
+      {selectedSpecies && (
+        <Modal
+          isOpen={!!selectedSpecies}
+          onRequestClose={closeModal}
+          contentLabel="Species Details"
+          className={`rounded-lg shadow-lg p-6 w-2/5 h-auto mx-auto flex flex-col justify-between transition-colors duration-500 ${
+            darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"
+          }`}
+          overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+        >
+          <div className="space-y-4">
+            <div className="h-64 rounded-md overflow-hidden flex items-center justify-center">
+              {selectedSpecies.image ? (
+                <img
+                  src={selectedSpecies.image}
+                  alt={selectedSpecies.name}
+                  className="h-64 self-center rounded-xl"
+                />
+              ) : (
+                <p
+                  className={`text-sm flex items-center justify-center h-full ${
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  No Image Available
+                </p>
+              )}
+            </div>
+            <h2 className="text-2xl font-bold">{selectedSpecies.name}</h2>
+            <p>
+              <strong>Species:</strong> {selectedSpecies.species || "N/A"}
+            </p>
+            <p>
+              <strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}
+            </p>
+            <p>
+              <strong>Lifecycle:</strong> {selectedSpecies.lifecycle || "N/A"}
+            </p>
+            <p>
+              <strong>Average Size:</strong>{" "}
+              {selectedSpecies.averageSize || "N/A"}
+            </p>
+            <p>
+              <strong>Nativity:</strong> {selectedSpecies.nativity || "N/A"}
+            </p>
+            <p>
+              <strong>Risk:</strong> {selectedSpecies.risk || "N/A"}
+            </p>
+            <p>
+              <strong>Control Methods:</strong>{" "}
+              {selectedSpecies.controlMethods || "N/A"}
+            </p>
+          </div>
+          <div className="flex justify-end mt-4">
+            <button
+              className={`px-4 py-2 rounded-md transition-colors duration-500 ${
+                darkMode
+                  ? "bg-blue-500 hover:bg-blue-600 text-white"
+                  : "bg-blue-500 hover:bg-blue-600 text-white"
+              }`}
+              onClick={closeModal}
+            >
+              Close
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

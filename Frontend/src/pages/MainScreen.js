@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import Home from "../components/Home";
 import Species from "../components/Species";
+import Recent from "../components/Recent";
 import {
   FaSync,
   FaBars,
@@ -87,7 +88,7 @@ function MainScreen() {
       case "Species":
         return <Species />;
       case "Recent":
-        return <div>Recent Activities</div>;
+        return <Recent />;
       case "Map":
         return <div>Map View</div>;
       case "Archive":
@@ -117,10 +118,6 @@ function MainScreen() {
           </div>
         </div>
         <div className="flex items-center">
-          <FaSync
-            className="mr-4 cursor-pointer text-lg"
-            onClick={handleSync}
-          />
           <button
             className="px-4 py-2 rounded-md"
             onClick={handleDarkModeToggle}
