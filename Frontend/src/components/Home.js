@@ -53,13 +53,13 @@ function Home({}) {
       <div className="flex flex-col md:flex-row h-full w-full">
         <div
           id="leftside"
-          className={`w-full md:w-2/3 flex flex-col shadow p-4 transition-colors duration-500 ${
+          className={`w-full md:w-2/3 flex flex-col shadow md:p-4 transition-colors duration-500 ${
             darkMode ? "bg-zinc-700" : "bg-white"
           }`}
           style={{ display: "flex", flex: "1 1 auto" }}
         >
           <div
-            className={`w-4/5 h-full border rounded-md overflow-hidden flex flex-col transition-colors duration-500 mx-auto ${
+            className={`md:w-4/5 w-full h-full border rounded-md overflow-hidden flex flex-col transition-colors duration-500 mx-auto  ${
               darkMode ? "border-zinc-800" : "border-zinc-100"
             }`}
             style={{ flex: "1 1 auto" }}
@@ -108,13 +108,13 @@ function Home({}) {
 
         <div
           id="rightside"
-          className={`w-full md:w-1/3 flex flex-col items-center shadow p-2 justify-center transition-colors duration-500 ${
+          className={`w-full md:w-1/3 flex flex-col items-center shadow md:p-2 justify-center transition-colors duration-500 ${
             darkMode ? "bg-zinc-700 text-white" : "bg-white text-black"
           }`}
           style={{ flex: "1 1 auto" }}
         >
           <div
-            className={`h-full rounded-2xl p-4 w-5/6 transition-colors duration-500 ${
+            className={`h-full md:rounded-2xl p-4 md:w-5/6 transition-colors duration-500 w-full ${
               darkMode ? "bg-zinc-800 text-white" : "bg-zinc-200 text-black"
             }`}
           >
@@ -167,7 +167,7 @@ function Home({}) {
             </ul>
           </div>
           <button
-            className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
+            className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 mb-12 ${
               darkMode
                 ? "bg-green text-light-green"
                 : "bg-light-green text-green"

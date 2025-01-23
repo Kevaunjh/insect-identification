@@ -37,3 +37,18 @@
 .custom-scrollbar::-webkit-scrollbar {
   display: none; /* Hide scrollbars */
 }
+
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: 100dvh; /* Use 100dvh directly if the browser supports it */
+  }
+
+  /* Ensure smooth scrolling within containers */
+  .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+}
