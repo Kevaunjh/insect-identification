@@ -48,4 +48,18 @@ Ensure you have the following installed:
    ```bash
    wget https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt
    ```
-
+---
+## Starting the Website
+Open two terminals. <br>
+For frontend, in terminal #1:
+```bash
+cd .\Frontend
+npm install
+npm run start
+```
+For backend, in terminal #2:
+```bash
+cd .\Backend
+pip install -r requirements.txt
+python app.py
+```
