@@ -86,14 +86,15 @@ function Species() {
         </div>
       )}
 
-      {/* Modal for showing species details */}
       {selectedSpecies && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-screen md:w-4/5 sm:h-5/6 h-full mx-auto flex flex-col justify-between transition-colors duration-500 ${
-            darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-screen md:w-4/5 sm:h-5/6 h-full mx-auto flex flex-col justify-between transition-colors duration-500 border-2 ${
+            darkMode
+              ? "bg-gray-700 text-white botder-white"
+              : "bg-white text-gray-900 border-black"
           }`}
           overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
@@ -103,7 +104,9 @@ function Species() {
                 <img
                   src={selectedSpecies.image}
                   alt={selectedSpecies.name}
-                  className="h-64 self-center rounded-xl"
+                  className={`h-64 self-center rounded-xl border-2 ${
+                    darkMode ? "border-white" : "border-black"
+                  }`}
                 />
               ) : (
                 <p

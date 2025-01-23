@@ -120,8 +120,10 @@ function Recent() {
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 h-full sm:h-5/6 mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar ${
-            darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 h-full sm:h-5/6 mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
+            darkMode
+              ? "bg-gray-700 text-white border-white"
+              : "bg-white text-gray-900 border-black"
           }`}
           overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
@@ -131,7 +133,9 @@ function Recent() {
                 <img
                   src={`data:image/jpeg;base64,${selectedSpecies.image}`}
                   alt={selectedSpecies.name}
-                  className="h-64 self-center rounded-xl"
+                  className={`h-64 self-center rounded-xl border-2 ${
+                    darkMode ? "border-white" : "border-black"
+                  }`}
                 />
               ) : (
                 <p
