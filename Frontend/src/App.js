@@ -1,12 +1,13 @@
 import React from "react";
-import MainScreen from "./components/MainScreen";
+import MainScreen from "./pages/MainScreen";
 import "./index.css";
+import { DarkModeProvider } from "./context/DarkModeContext";
 
 function App() {
   return (
-    <div>
+    <DarkModeProvider>
       <MainScreen />
-    </div>
+    </DarkModeProvider>
   );
 }
 

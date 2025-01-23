@@ -1,0 +1,198 @@
+import React, { useEffect, useState, useContext } from "react";
+import { DarkModeContext } from "../context/DarkModeContext";
+
+function Home({}) {
+  const [speciesData, setSpeciesData] = useState([]);
+  const [factsData, setFactsData] = useState(null);
+  const [showFacts, setShowFacts] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { darkMode } = useContext(DarkModeContext);
+
+  const handleShowFactsToggle = () => {
+    setShowFacts((prev) => !prev);
+  };
+
+  const handleNextImage = () => {
+    if (speciesData.length > 0 && speciesData[0].images?.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % speciesData[0].images.length);
+    }
+  };
+
+  useEffect(() => {
+    const fetchSpeciesData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/species");
+        const result = await response.json();
+        if (result) {
+          setSpeciesData([result]);
+          fetchFactsData(result.name);
+        }
+      } catch (error) {
+        console.error("Error fetching species data:", error);
+      }
+    };
+
+    const fetchFactsData = async (speciesName) => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/speciesdata");
+        const result = await response.json();
+        const matchedFacts = result.find(
+          (item) => item.speciesName === speciesName
+        );
+        setFactsData(matchedFacts || null);
+      } catch (error) {
+        console.error("Error fetching facts data:", error);
+      }
+    };
+
+    fetchSpeciesData();
+  }, []);
+
+  return (
+    <div
+      className="flex flex-col items-center h-[calc(100vh-4rem)] w-full"
+      style={{ height: "calc(100vh - 4rem)" }}
+    >
+      <div className="flex h-full w-full">
+        <div
+          id="leftside"
+          className={`w-2/3 flex flex-col shadow p-4 transition-colors duration-500 ${
+            darkMode ? "bg-zinc-700" : "bg-white"
+          }`}
+          style={{ display: "flex", flex: "1 1 auto" }}
+        >
+          <div
+            className={`w-4/5 h-full border rounded-md overflow-hidden flex flex-col transition-colors duration-500 mx-auto ${
+              darkMode ? "border-zinc-800" : "border-zinc-100"
+            }`}
+            style={{ flex: "1 1 auto" }}
+          >
+            <div
+              className={`w-full flex items-center justify-center transition-colors duration-500 ${
+                darkMode ? "bg-zinc-800" : "bg-zinc-100"
+              }`}
+              style={{ flex: "2 1 auto" }}
+            >
+              {speciesData.length > 0 && speciesData[0]?.image ? (
+                <img
+                  src={`data:image/jpeg;base64,${speciesData[0].image}`}
+                  alt={speciesData[0].name || "Insect Image"}
+                  className="object-contain w-2/5 "
+                />
+              ) : (
+                <p
+                  className={`${
+                    darkMode ? "text-zinc-200" : "text-zinc-800"
+                  } text-center`}
+                >
+                  No Data Found
+                </p>
+              )}
+            </div>
+            <div
+              className={`w-full flex flex-col items-center justify-center transition-colors duration-500 h-1/5 min-h-1/5 ${
+                darkMode ? "bg-zinc-900 text-white" : "bg-zinc-200 text-black"
+              }`}
+            >
+              <h2 className="text-xl font-bold text-center">
+                {speciesData.length > 0
+                  ? speciesData[0]?.name || "No Data Found"
+                  : "No Data Found"}
+              </h2>
+              <p className="text-sm text-center ">
+                {speciesData.length > 0
+                  ? `Confidence: ${speciesData[0]?.confidence}%` ||
+                    "No Data Found"
+                  : "No Data Found"}
+              </p>
+            </div>
+          </div>
+          <button
+            className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
+              darkMode
+                ? "bg-green text-light-green"
+                : "bg-light-green text-green"
+            }`}
+            onClick={handleNextImage}
+          >
+            View More Images
+          </button>
+        </div>
+
+        <div
+          id="rightside"
+          className={`w-1/3 flex flex-col items-center shadow p-2 justify-center transition-colors duration-500 ${
+            darkMode ? "bg-zinc-700 text-white" : "bg-white text-black"
+          }`}
+          style={{ flex: "1 1 auto" }}
+        >
+          <div
+            className={`h-full rounded-2xl p-4 w-5/6 transition-colors duration-500 ${
+              darkMode ? "bg-zinc-800 text-white" : "bg-zinc-200 text-black"
+            }`}
+          >
+            <h1 className="text-3xl font-medium h-1/3 flex justify-center items-center">
+              {showFacts ? "Common Facts" : "Species Information"}
+            </h1>
+            <ul className="gap-4 w-full flex-grow h-1/3 flex justify-center items-center text-sm">
+              {showFacts ? (
+                factsData ? (
+                  <li>
+                    <strong>Species Name:</strong> {factsData.speciesName}
+                    <br />
+                    <strong>Description:</strong> {factsData.description}
+                    <br />
+                    <strong>Fun Fact:</strong> {factsData.funFact}
+                  </li>
+                ) : (
+                  <p>No facts available for this species</p>
+                )
+              ) : speciesData.length > 0 ? (
+                <li>
+                  <strong>Name:</strong>{" "}
+                  {speciesData[0].name || "No Data Found"}
+                  <br />
+                  <strong>Species:</strong>{" "}
+                  {speciesData[0].species || "No Data Found"}
+                  <br />
+                  <strong>Habitat:</strong>{" "}
+                  {speciesData[0].habitat || "No Data Found"}
+                  <br />
+                  <strong>Temperature:</strong>{" "}
+                  {speciesData[0].temperature || "No Data Found"}
+                  <br />
+                  <strong>Light Level:</strong>{" "}
+                  {speciesData[0].light || "No Data Found"}
+                  <br />
+                  <strong>Heat:</strong>{" "}
+                  {speciesData[0].heat || "No Data Found"}
+                  <br />
+                  <strong>Latitude:</strong>{" "}
+                  {speciesData[0].latitude || "No Data Found"}
+                  <br />
+                  <strong>Longitude:</strong>{" "}
+                  {speciesData[0].longitude || "No Data Found"}
+                  <br />
+                </li>
+              ) : (
+                <p>No data available</p>
+              )}
+            </ul>
+          </div>
+          <button
+            className={`mt-6 px-6 py-4 rounded-md self-center transition-colors duration-500 ${
+              darkMode
+                ? "bg-green text-light-green"
+                : "bg-light-green text-green"
+            }`}
+            onClick={handleShowFactsToggle}
+          >
+            Show {showFacts ? "Species Information" : "Common Facts"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Home;
