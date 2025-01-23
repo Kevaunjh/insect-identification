@@ -14,6 +14,7 @@ client = MongoClient(MONGO_URI)
 db = client["insect_identification"]
 collection = db["species"]
 speciesdata = db["basespeciesdata"]
+existingspecies = db["existingspecies"]
 
 @app.route("/api/species", methods=["GET"])
 def get_species():
@@ -30,6 +31,14 @@ def get_speciesdata():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/existingspecies", methods=["GET"])
+def get_existingspeciesdata():
+    try:
+        data = list(existingspecies.find({}, {"_id": 0})) 
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -38,6 +47,8 @@ def get_data():
         if source == "species":
              data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
         elif source == "speciesdata":
+            data = list(speciesdata.find({}, {"_id": 0}))
+        elif source == "exisitingspecies":
             data = list(speciesdata.find({}, {"_id": 0}))
         else:
             return jsonify({"error": "Invalid source parameter"}), 400

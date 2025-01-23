@@ -49,10 +49,7 @@ function Home({}) {
   }, []);
 
   return (
-    <div
-      className="flex flex-col items-center h-[calc(100vh-4rem)] w-full"
-      style={{ height: "calc(100vh - 4rem)" }}
-    >
+    <div className="flex flex-col items-center h-[calc(100vh-4rem)] w-full">
       <div className="flex h-full w-full">
         <div
           id="leftside"

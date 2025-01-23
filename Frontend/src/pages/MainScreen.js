@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import Home from "../components/Home";
+import Species from "../components/Species";
 import {
   FaSync,
   FaBars,
@@ -84,24 +85,7 @@ function MainScreen() {
       case "Home":
         return <Home />;
       case "Species":
-        return (
-          <div>
-            <h1>Species Information</h1>
-            <ul>
-              {speciesData.length > 0 ? (
-                <li>
-                  <strong>Name:</strong>{" "}
-                  {speciesData[0].name || "No Data Found"}
-                  <br />
-                  <strong>Species:</strong>{" "}
-                  {speciesData[0].species || "No Data Found"}
-                </li>
-              ) : (
-                <p>No data available</p>
-              )}
-            </ul>
-          </div>
-        );
+        return <Species />;
       case "Recent":
         return <div>Recent Activities</div>;
       case "Map":
