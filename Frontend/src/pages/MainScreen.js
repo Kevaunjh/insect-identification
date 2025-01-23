@@ -111,7 +111,7 @@ function MainScreen() {
             onClick={handleSidebarToggle}
           />
           <div>
-            <div className="text-xl font-bold">
+            <div className="md:text-xl font-bold text-sm">
               Invasive Species Identification
             </div>
             <div className="text-sm">Capstone Project</div>

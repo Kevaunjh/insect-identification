@@ -50,10 +50,10 @@ function Home({}) {
 
   return (
     <div className="flex flex-col items-center h-[calc(100vh-4rem)] w-full">
-      <div className="flex h-full w-full">
+      <div className="flex flex-col md:flex-row h-full w-full">
         <div
           id="leftside"
-          className={`w-2/3 flex flex-col shadow p-4 transition-colors duration-500 ${
+          className={`w-full md:w-2/3 flex flex-col shadow p-4 transition-colors duration-500 ${
             darkMode ? "bg-zinc-700" : "bg-white"
           }`}
           style={{ display: "flex", flex: "1 1 auto" }}
@@ -108,7 +108,7 @@ function Home({}) {
 
         <div
           id="rightside"
-          className={`w-1/3 flex flex-col items-center shadow p-2 justify-center transition-colors duration-500 ${
+          className={`w-full md:w-1/3 flex flex-col items-center shadow p-2 justify-center transition-colors duration-500 ${
             darkMode ? "bg-zinc-700 text-white" : "bg-white text-black"
           }`}
           style={{ flex: "1 1 auto" }}
@@ -118,10 +118,10 @@ function Home({}) {
               darkMode ? "bg-zinc-800 text-white" : "bg-zinc-200 text-black"
             }`}
           >
-            <h1 className="text-3xl font-medium h-1/3 flex justify-center items-center">
+            <h1 className=" text-lg xl:text-3xl font-medium h-1/3 flex justify-center items-center">
               {showFacts ? "Common Facts" : "Species Information"}
             </h1>
-            <ul className="gap-4 w-full flex-grow h-1/3 flex justify-center items-center text-sm">
+            <ul className="gap-4 w-full flex-grow h-1/3 flex justify-center items-center text-xs md:text-sm">
               {showFacts ? (
                 factsData ? (
                   <li>

@@ -92,7 +92,7 @@ function Species() {
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`rounded-lg shadow-lg p-6 w-2/5 h-auto mx-auto flex flex-col justify-between transition-colors duration-500 ${
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-screen md:w-4/5 sm:h-5/6 h-full mx-auto flex flex-col justify-between transition-colors duration-500 ${
             darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"
           }`}
           overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
@@ -144,8 +144,8 @@ function Species() {
             <button
               className={`px-4 py-2 rounded-md transition-colors duration-500 ${
                 darkMode
-                  ? "bg-blue-500 hover:bg-blue-600 text-white"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                  ? "bg-green hover:bg-green-700 text-white"
+                  : "bg-light-green hover:bg-green-300 black-white"
               }`}
               onClick={closeModal}
             >
