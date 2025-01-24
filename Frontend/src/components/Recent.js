@@ -58,7 +58,8 @@ function Species() {
     setConfirmationModel(false);
     const data = {
       name: species.name,
-
+      species: species.species,
+      habitat: species.habitat,
       image: species.image,
       temperature: species.temperature,
       light: species.light,
