@@ -17,6 +17,7 @@ speciesdata = db["basespeciesdata"]
 existingspecies = db["existingspecies"]
 alldata = db["species"]
 speciesinfo = db["speciesinfo"]
+archivespecies = db["archivedspecies"]
 
 @app.route("/api/species", methods=["GET"])
 def get_species():
@@ -34,12 +35,31 @@ def get_alldata():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    
 @app.route("/api/speciesinfo", methods=["GET"])
 def get_speciesinfo():
     try:
         data = list(speciesinfo.find({}, {"_id": 0})) 
         return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/archivespecies", methods=["GET"])
+def get_archivespecies():
+    try:
+        data = list(archivespecies.find({}, {"_id": 0})) 
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/archivespecies", methods=["POST"])
+def archive_species():
+    try:
+        data = request.get_json() 
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        result = archivespecies.insert_one(data)
+        return jsonify({"message": "Species archived successfully", "id": str(result.inserted_id)}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -68,9 +88,11 @@ def get_data():
         elif source == "speciesdata":
             data = list(speciesdata.find({}, {"_id": 0}))
         elif source == "exisitingspecies":
-            data = list(speciesdata.find({}, {"_id": 0}))
+            data = list(existingspecies.find({}, {"_id": 0}))
         elif source == "speciesinfo":
             data = list(speciesinfo.find({}, {"_id": 0}))
+        elif source == "archivespecies":
+            data = list(archivespecies.find({}, {"_id": 0}))
         else:
             return jsonify({"error": "Invalid source parameter"}), 400
         return jsonify(data), 200

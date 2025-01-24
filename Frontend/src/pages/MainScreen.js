@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useContext } from "react";
 import Home from "../components/Home";
-import Species from "../components/Species";
 import Recent from "../components/Recent";
+import Archive from "../components/Archive";
+import Species from "../components/Species";
 import {
   FaSync,
   FaBars,
@@ -50,15 +51,6 @@ function MainScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchSpeciesData();
-    const interval = setInterval(() => {
-      fetchSpeciesData();
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const handleShowFactsToggle = () => {
     setShowFacts((prev) => !prev);
   };
@@ -90,11 +82,11 @@ function MainScreen() {
       case "Recent":
         return <Recent />;
       case "Map":
-        return <div>Map View</div>;
+        return "Hello from Map";
       case "Archive":
-        return <div>Archived Data</div>;
+        return <Archive />;
       default:
-        return <div>Welcome!</div>;
+        return <Home />;
     }
   };
 

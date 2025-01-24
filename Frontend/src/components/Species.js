@@ -7,6 +7,7 @@ function Species() {
   const [existingSpeciesData, setExistingSpeciesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSpecies, setSelectedSpecies] = useState(null);
+  const [confirmationModel, setConfirmationModel] = useState(false);
 
   useEffect(() => {
     const fetchSpeciesData = async () => {
@@ -32,6 +33,35 @@ function Species() {
 
   const closeModal = () => {
     setSelectedSpecies(null);
+  };
+
+  const saveToArchives = (species) => {
+    setSelectedSpecies(null);
+    setConfirmationModel(false);
+    const data = {
+      name: species.name,
+      species: species.species,
+      habitat: species.habitat,
+    };
+    fetch("http://127.0.0 :5000/api/archivespecies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((data) => console.log(data))
+      .catch((error) => console.error("Error:", error));
+  };
+
+  const handleSaveToArchives = (species) => {
+    saveToArchives(species);
+  };
+
+  const openArchivesModal = (species) => {
+    setSelectedSpecies(species);
+    setConfirmationModel(true);
   };
 
   return (
@@ -85,13 +115,12 @@ function Species() {
           )}
         </div>
       )}
-
-      {selectedSpecies && (
+      {selectedSpecies && !confirmationModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-screen md:w-4/5 sm:h-5/6 h-full mx-auto flex flex-col justify-between transition-colors duration-500 border-2 ${
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-screen md:w-4/5 sm:h-5/6 h-full mx-auto flex flex-col justify-between transition-colors duration-500 border-2 custom-scrollbar  ${
             darkMode
               ? "bg-gray-700 text-white botder-white"
               : "bg-white text-gray-900 border-black"
@@ -99,7 +128,7 @@ function Species() {
           overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
           <div className="space-y-4">
-            <div className="h-64 rounded-md overflow-hidden flex items-center justify-center">
+            <div className="h-64 rounded-md overflow-hidden flex items-center justify-center overscroll-y-auto">
               {selectedSpecies.image ? (
                 <img
                   src={selectedSpecies.image}

@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useContext } from "react";
 import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
+import { FaBox } from "react-icons/fa";
 
-function Recent() {
+function Species() {
   const { darkMode } = useContext(DarkModeContext);
   const [recentSpeciesData, setRecentSpeciesData] = useState([]);
   const [filteredSpeciesData, setFilteredSpeciesData] = useState([]);
   const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
+  const [confirmationModel, setConfirmationModel] = useState(false);
 
   const fetchRecentSpecies = async () => {
     try {
@@ -27,7 +29,7 @@ function Recent() {
 
   useEffect(() => {
     fetchRecentSpecies();
-    const interval = setInterval(fetchRecentSpecies, 5000);
+    const interval = setInterval(fetchRecentSpecies, 20000);
 
     return () => clearInterval(interval);
   }, []);
@@ -37,6 +39,7 @@ function Recent() {
   };
 
   const closeModal = () => {
+    setConfirmationModel(false);
     setSelectedSpecies(null);
   };
 
@@ -48,6 +51,49 @@ function Recent() {
         species.name.toLowerCase().includes(text)
       )
     );
+  };
+
+  const saveToArchives = (species) => {
+    setSelectedSpecies(null);
+    setConfirmationModel(false);
+    const data = {
+      name: species.name,
+
+      image: species.image,
+      temperature: species.temperature,
+      light: species.light,
+      heat: species.heat,
+      date: species.date,
+      time: species.time,
+    };
+    fetch("http://127.0.0.1:5000/api/archivespecies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => console.log("Data successfully archived:", data))
+      .catch((error) => console.error("Error:", error));
+  };
+
+  const handleSaveToArchives = (species) => {
+    saveToArchives(species);
+  };
+
+  const openConfirmationModel = () => {
+    setConfirmationModel(true);
+  };
+
+  const handleClose = () => {
+    setConfirmationModel(false);
+    setSelectedSpecies(null);
   };
 
   return (
@@ -84,43 +130,54 @@ function Recent() {
                 }`}
                 onClick={() => openModal(species)}
               >
-                <div className="w-32 h-32 bg-gray-300 rounded-md overflow-hidden">
-                  {species.image ? (
-                    <img
-                      src={`data:image/jpeg;base64,${species.image}`}
-                      alt={species.name}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <p
-                      className={`text-sm flex items-center justify-center h-full ${
-                        darkMode ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
-                      No Image
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col justify-center pl-4">
-                  <h2 className="text-lg font-bold">{species.name}</h2>
-                  <p className="text-sm">
-                    <strong>Discovered Time:</strong> {species.time || "N/A"}
-                  </p>
-                  <p className="text-sm">
-                    <strong>Discovered Date:</strong> {species.date || "N/A"}
-                  </p>
+                <div className="flex w-full">
+                  <div className="flex justify-between w-full">
+                    <div className="flex items-center">
+                      <div className="w-32 h-32 bg-gray-300 rounded-md overflow-hidden">
+                        {species.image ? (
+                          <img
+                            src={`data:image/jpeg;base64,${species.image}`}
+                            alt={species.name}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <p
+                            className={`text-sm flex items-center justify-center h-full ${
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          >
+                            No Image
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col justify-center justify-self-start pl-4 ">
+                        <h2 className="text-lg font-bold">{species.name}</h2>
+                        <p className="text-sm">
+                          <strong>Discovered Time:</strong>{" "}
+                          {species.time || "N/A"}
+                        </p>
+                        <p className="text-sm">
+                          <strong>Discovered Date:</strong>{" "}
+                          {species.date || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <FaBox onClick={openConfirmationModel} />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-      {selectedSpecies && (
+      {selectedSpecies && !confirmationModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 h-full sm:h-5/6 mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 h-full sm:h-5/6 mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2  ${
             darkMode
               ? "bg-gray-700 text-white border-white"
               : "bg-white text-gray-900 border-black"
@@ -185,8 +242,68 @@ function Recent() {
           </div>
         </Modal>
       )}
+      :
+      {confirmationModel && (
+        <Modal
+          isOpen={!!selectedSpecies}
+          onRequestClose={closeModal}
+          contentLabel="Species Details"
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-full sm:h-auto mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
+            darkMode
+              ? "bg-gray-800 text-gray-100 border-gray-600"
+              : "bg-white text-gray-900 border-gray-300"
+          }`}
+          overlayClassName="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center"
+        >
+          <div className="flex flex-col items-center space-y-6">
+            {/* Title */}
+            <h1
+              className={`text-xl font-bold text-center ${
+                darkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
+              Archive Confirmation
+            </h1>
+
+            {/* Content */}
+            <div
+              className={`w-full rounded-md p-4 flex items-center justify-center text-center ${
+                darkMode
+                  ? "bg-gray-700 text-gray-200"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              <p>Are you sure you would like to archive this species?</p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-center gap-4 w-full">
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-green-600 hover:bg-green-500 text-gray-100"
+                    : "bg-green-500 hover:bg-green-400 text-white"
+                }`}
+                onClick={() => handleSaveToArchives(selectedSpecies)}
+              >
+                Yes, Archive
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-red-600 hover:bg-red-500 text-gray-100"
+                    : "bg-red-500 hover:bg-red-400 text-white"
+                }`}
+                onClick={closeModal}
+              >
+                No, Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-export default Recent;
+export default Species;
