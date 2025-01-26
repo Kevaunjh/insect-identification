@@ -124,10 +124,10 @@ function Species() {
             {filteredSpeciesData.map((species, index) => (
               <div
                 key={index}
-                className={`flex w-full p-4 rounded-lg shadow-md transition-colors duration-500 cursor-pointer ${
+                className={`flex w-full p-4 rounded-lg shadow-md transition-colors duration-500 cursor-pointer border-2 ${
                   darkMode
-                    ? "bg-gray-700 hover:bg-gray-600"
-                    : "bg-white hover:bg-gray-100"
+                    ? "bg-gray-700 hover:bg-gray-600 border-gray-600"
+                    : "bg-white hover:bg-gray-100 border-gray-300"
                 }`}
                 onClick={() => openModal(species)}
               >
@@ -243,7 +243,7 @@ function Species() {
           </div>
         </Modal>
       )}
-      :
+
       {confirmationModel && (
         <Modal
           isOpen={!!selectedSpecies}
@@ -257,7 +257,6 @@ function Species() {
           overlayClassName="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center"
         >
           <div className="flex flex-col items-center space-y-6">
-            {/* Title */}
             <h1
               className={`text-xl font-bold text-center ${
                 darkMode ? "text-gray-100" : "text-gray-800"
@@ -265,8 +264,6 @@ function Species() {
             >
               Archive Confirmation
             </h1>
-
-            {/* Content */}
             <div
               className={`w-full rounded-md p-4 flex items-center justify-center text-center ${
                 darkMode
@@ -276,8 +273,6 @@ function Species() {
             >
               <p>Are you sure you would like to archive this species?</p>
             </div>
-
-            {/* Buttons */}
             <div className="flex justify-center gap-4 w-full">
               <button
                 className={`px-6 py-2 rounded-md font-medium text-sm transition ${

@@ -3,6 +3,7 @@ import Home from "../components/Home";
 import Recent from "../components/Recent";
 import Archive from "../components/Archive";
 import Species from "../components/Species";
+import Maps from "../components/Maps";
 import {
   FaSync,
   FaBars,
@@ -82,7 +83,7 @@ function MainScreen() {
       case "Recent":
         return <Recent />;
       case "Map":
-        return "Hello from Map";
+        return <Maps />;
       case "Archive":
         return <Archive />;
       default:

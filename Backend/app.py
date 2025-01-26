@@ -27,6 +27,15 @@ def get_species():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+@app.route("/api/location", methods=["GET"])
+def get_location():
+    try:
+        data = collection.find({}, {"_id": 0, "latitude": 1, "longitude": 1})
+        return jsonify(list(data)), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    
 @app.route("/api/alldata", methods=["GET"])
 def get_alldata():
     try:
@@ -46,7 +55,7 @@ def get_speciesinfo():
 @app.route("/api/archivespecies", methods=["GET"])
 def get_archivespecies():
     try:
-        data = list(archivespecies.find({}, {"_id": 0})) 
+        data = list(archivespecies.find({}, {"_id": 0}).sort("_id", -1)) 
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
