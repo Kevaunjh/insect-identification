@@ -43,7 +43,9 @@ const ZoomToMarker = ({ position }) => {
 
 function Maps() {
   const [locations, setLocations] = useState([]);
-  const [initialPosition, setInitialPosition] = useState([40.7128, -74.006]);
+  const [initialPosition, setInitialPosition] = useState([
+    43.945969, -78.8938948,
+  ]);
 
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/location")
@@ -67,7 +69,7 @@ function Maps() {
       <div className="flex flex-col md:flex-row h-full w-full">
         <MapContainer
           center={initialPosition}
-          zoom={8}
+          zoom={16}
           minZoom={3}
           className="w-full h-full z-5"
         >
