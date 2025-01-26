@@ -92,9 +92,9 @@ function MainScreen() {
   };
 
   return (
-    <div className="relative h-screen w-screen transition-colors duration-500 overflow-auto">
+    <div className="relative h-screen w-screen transition-colors duration-500 overflow-auto z-0">
       <div
-        className={` h-16 flex justify-between items-center pl-6 pr-2 text-2xl shadow transition-colors duration-500 ${
+        className={`h-16 flex justify-between items-center pl-6 pr-2 text-2xl shadow transition-colors duration-500 ${
           darkMode ? "bg-green text-light-green" : "bg-light-green text-green"
         }`}
       >
@@ -200,7 +200,7 @@ function MainScreen() {
         <div className="fixed inset-0 z-40" onClick={handleSidebarToggle}></div>
       )}
 
-      <div className="relative flex-grow">{renderContent()}</div>
+      <div className="relative flex-grow z-0">{renderContent()}</div>
     </div>
   );
 }
