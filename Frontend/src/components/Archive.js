@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
+import { FaTrash } from "react-icons/fa";
 
 function Archive() {
   const { darkMode } = useContext(DarkModeContext);
@@ -84,31 +85,42 @@ function Archive() {
                 }`}
                 onClick={() => openModal(species)}
               >
-                <div className="w-32 h-32 bg-gray-300 rounded-md overflow-hidden">
-                  {species.image ? (
-                    <img
-                      src={`data:image/jpeg;base64,${species.image}`}
-                      alt={species.name}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <p
-                      className={`text-sm flex items-center justify-center h-full ${
-                        darkMode ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
-                      No Image
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col justify-center pl-4">
-                  <h2 className="text-lg font-bold">{species.name}</h2>
-                  <p className="text-sm">
-                    <strong>Discovered Time:</strong> {species.time || "N/A"}
-                  </p>
-                  <p className="text-sm">
-                    <strong>Discovered Date:</strong> {species.date || "N/A"}
-                  </p>
+                <div className="flex w-full">
+                  <div className="flex justify-between w-full">
+                    <div className="flex items-col">
+                      <div className="w-32 h-32 bg-gray-300 rounded-md overflow-hidden">
+                        {species.image ? (
+                          <img
+                            src={`data:image/jpeg;base64,${species.image}`}
+                            alt={species.name}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <p
+                            className={`text-sm flex items-center justify-center h-full ${
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          >
+                            No Image
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col justify-center pl-4">
+                        <h2 className="text-lg font-bold">{species.name}</h2>
+                        <p className="text-sm">
+                          <strong>Discovered Time:</strong>{" "}
+                          {species.time || "N/A"}
+                        </p>
+                        <p className="text-sm">
+                          <strong>Discovered Date:</strong>{" "}
+                          {species.date || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <FaTrash className="mr-2 ml-2 z-10" />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -149,7 +161,8 @@ function Archive() {
             </div>
             <h2 className="text-2xl font-bold">{selectedSpecies.name}</h2>
             <p>
-              <strong>Species:</strong> {selectedSpecies.species || "N/A"}
+              <strong>Species:</strong>{" "}
+              {selectedSpecies.scientific_name || "N/A"}
             </p>
             <p>
               <strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}

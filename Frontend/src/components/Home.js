@@ -140,7 +140,7 @@ function Home({}) {
                   {speciesData[0].name || "No Data Found"}
                   <br />
                   <strong>Species:</strong>{" "}
-                  {speciesData[0].species || "No Data Found"}
+                  {speciesData[0].scientific_name || "No Data Found"}
                   <br />
                   <strong>Habitat:</strong>{" "}
                   {speciesData[0].habitat || "No Data Found"}

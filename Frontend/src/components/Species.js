@@ -43,7 +43,7 @@ function Species() {
       species: species.species,
       habitat: species.habitat,
     };
-    fetch("http://127.0.0 :5000/api/archivespecies", {
+    fetch("http://127.0.0:5000/api/speciesinfo", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -148,9 +148,6 @@ function Species() {
               )}
             </div>
             <h2 className="text-2xl font-bold">{selectedSpecies.name}</h2>
-            <p>
-              <strong>Species:</strong> {selectedSpecies.species || "N/A"}
-            </p>
             <p>
               <strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}
             </p>

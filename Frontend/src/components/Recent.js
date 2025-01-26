@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
-import { FaBox } from "react-icons/fa";
+import { FaBox, FaTrash } from "react-icons/fa";
 
 function Species() {
   const { darkMode } = useContext(DarkModeContext);
@@ -58,7 +58,7 @@ function Species() {
     setConfirmationModel(false);
     const data = {
       name: species.name,
-      species: species.species,
+      scientific_name: species.scientific_name,
       habitat: species.habitat,
       image: species.image,
       temperature: species.temperature,
@@ -164,7 +164,11 @@ function Species() {
                       </div>
                     </div>
                     <div className="flex items-end">
-                      <FaBox onClick={openConfirmationModel} />
+                      <FaBox
+                        onClick={openConfirmationModel}
+                        className="mr-2 ml-2 z-10"
+                      />
+                      <FaTrash className="mr-2 ml-2 z-10" />
                     </div>
                   </div>
                 </div>
@@ -207,7 +211,8 @@ function Species() {
             </div>
             <h2 className="text-2xl font-bold">{selectedSpecies.name}</h2>
             <p>
-              <strong>Species:</strong> {selectedSpecies.species || "N/A"}
+              <strong>Species:</strong>{" "}
+              {selectedSpecies.scientific_name || "N/A"}
             </p>
             <p>
               <strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}
