@@ -93,6 +93,13 @@ function Archive() {
     deleteSpecies(species);
   };
 
+  useEffect(() => {
+    fetchRecentSpecies();
+    const interval = setInterval(fetchRecentSpecies, 20000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div
       className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-y-auto ${
