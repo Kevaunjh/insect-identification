@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 import os
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 CORS(app)
@@ -12,6 +13,7 @@ MONGO_URI = os.getenv(
 )
 client = MongoClient(MONGO_URI)
 db = client["insect_identification"]
+
 collection = db["species"]
 speciesdata = db["basespeciesdata"]
 existingspecies = db["existingspecies"]
@@ -26,7 +28,7 @@ def get_species():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route("/api/location", methods=["GET"])
 def get_location():
     try:
@@ -35,14 +37,21 @@ def get_location():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    
+from bson import ObjectId
+
 @app.route("/api/alldata", methods=["GET"])
 def get_alldata():
     try:
-        data = list(collection.find({}, {"_id": 0}).sort("_id", -1))
+        data = list(collection.find({}).sort("_id", -1))
+        
+        # Convert ObjectId to string
+        for item in data:
+            item["_id"] = str(item["_id"])
+
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/speciesinfo", methods=["GET"])
 def get_speciesinfo():
@@ -51,7 +60,7 @@ def get_speciesinfo():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route("/api/archivespecies", methods=["GET"])
 def get_archivespecies():
     try:
@@ -72,6 +81,29 @@ def archive_species():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/delspecies", methods=["DELETE"])
+def remove_species():
+    try:
+        data = request.get_json()
+        if not data or "id" not in data:
+            return jsonify({"error": "ID is required to remove a species"}), 400
+
+        species_id = data["id"]
+
+        species = collection.find_one({"_id": ObjectId(species_id)})
+        if not species:
+            return jsonify({"error": "Species not found"}), 404
+
+        result = collection.delete_one({"_id": ObjectId(species_id)})
+
+        if result.deleted_count == 1:
+            return jsonify({"message": "Species removed successfully", "id": species_id}), 200
+        else:
+            return jsonify({"error": "Backend cannot remove the species "}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/speciesdata", methods=["GET"])
 def get_speciesdata():
     try:
@@ -79,7 +111,7 @@ def get_speciesdata():
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route("/api/existingspecies", methods=["GET"])
 def get_existingspeciesdata():
     try:
@@ -93,10 +125,10 @@ def get_data():
     try:
         source = request.args.get("source", "species")
         if source == "species":
-             data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
+            data = collection.find_one({}, {"_id": 0}, sort=[("_id", -1)])
         elif source == "speciesdata":
             data = list(speciesdata.find({}, {"_id": 0}))
-        elif source == "exisitingspecies":
+        elif source == "existingspecies":
             data = list(existingspecies.find({}, {"_id": 0}))
         elif source == "speciesinfo":
             data = list(speciesinfo.find({}, {"_id": 0}))

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useContext } from "react";
 import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
 import { FaBox, FaTrash } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Species() {
   const { darkMode } = useContext(DarkModeContext);
@@ -11,6 +13,7 @@ function Species() {
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
   const [confirmationModel, setConfirmationModel] = useState(false);
+  const [deleteModel, setDeleteModel] = useState(false);
 
   const fetchRecentSpecies = async () => {
     try {
@@ -41,6 +44,7 @@ function Species() {
   const closeModal = () => {
     setConfirmationModel(false);
     setSelectedSpecies(null);
+    setDeleteModel(false);
   };
 
   const handleFilterChange = (e) => {
@@ -53,7 +57,27 @@ function Species() {
     );
   };
 
+  const openConfirmationModel = (species) => {
+    setSelectedSpecies(species);
+    setConfirmationModel(true);
+  };
+
+  const openDeleteModel = (species) => {
+    setSelectedSpecies(species);
+    setDeleteModel(true);
+  };
+
+  const handleDelete = (species) => {
+    deleteSpecies(species);
+  };
+
+  const handleSaveToArchives = (species) => {
+    saveToArchives(species);
+  };
+
   const saveToArchives = (species) => {
+    deleteSpecies(species);
+
     setSelectedSpecies(null);
     setConfirmationModel(false);
     const data = {
@@ -84,19 +108,43 @@ function Species() {
       .catch((error) => console.error("Error:", error));
   };
 
-  const handleSaveToArchives = (species) => {
-    saveToArchives(species);
-  };
-
-  const openConfirmationModel = () => {
-    setConfirmationModel(true);
-  };
-
-  const handleClose = () => {
-    setConfirmationModel(false);
+  const deleteSpecies = (species) => {
     setSelectedSpecies(null);
-  };
+    setDeleteModel(false);
 
+    fetch("http://127.0.0.1:5000/api/delspecies", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: species._id }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data.message || `Failed to delete species: ${response.statusText}`
+          );
+        }
+        return data;
+      })
+      .then((data) => {
+        console.log("Species successfully deleted:", data);
+        toast.success("Species deleted successfully!");
+        setRecentSpeciesData((prev) =>
+          prev.filter((item) => item._id !== species._id)
+        );
+        setFilteredSpeciesData((prev) =>
+          prev.filter((item) => item._id !== species._id)
+        );
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        toast.error(`Deletion failed: ${error.message}`);
+        // Optionally refetch data to ensure sync
+        fetchRecentSpecies();
+      });
+  };
   return (
     <div
       className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-y-auto ${
@@ -165,10 +213,19 @@ function Species() {
                     </div>
                     <div className="flex items-end">
                       <FaBox
-                        onClick={openConfirmationModel}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openConfirmationModel(species);
+                        }}
                         className="mr-2 ml-2 z-10"
                       />
-                      <FaTrash className="mr-2 ml-2 z-10" />
+                      <FaTrash
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModel(species);
+                        }}
+                        className="mr-2 ml-2 z-10"
+                      />
                     </div>
                   </div>
                 </div>
@@ -177,7 +234,10 @@ function Species() {
           </div>
         )}
       </div>
-      {selectedSpecies && !confirmationModel && (
+
+      {/* Modals for the screen */}
+
+      {selectedSpecies && !confirmationModel && !deleteModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
@@ -249,7 +309,9 @@ function Species() {
         </Modal>
       )}
 
-      {confirmationModel && (
+      {/* Archives Modal */}
+
+      {confirmationModel && !deleteModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
@@ -303,6 +365,67 @@ function Species() {
           </div>
         </Modal>
       )}
+
+      {/* Delete Modal */}
+
+      {deleteModel && (
+        <Modal
+          isOpen={!!selectedSpecies}
+          onRequestClose={closeModal}
+          contentLabel="Species Details"
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-full sm:h-auto mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
+            darkMode
+              ? "bg-gray-800 text-gray-100 border-gray-600"
+              : "bg-white text-gray-900 border-gray-300"
+          }`}
+          overlayClassName="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center"
+        >
+          <div className="flex flex-col items-center space-y-6">
+            <h1
+              className={`text-xl font-bold text-center ${
+                darkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
+              Delete this species?
+            </h1>
+            <div
+              className={`w-full rounded-md p-4 flex items-center justify-center text-center ${
+                darkMode
+                  ? "bg-gray-700 text-gray-200"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              <p>
+                Are you sure you would like to delete this species from the
+                database? This action is permanent and cannot be reversed.
+              </p>
+            </div>
+            <div className="flex justify-center gap-4 w-full">
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-green-600 hover:bg-green-500 text-gray-100"
+                    : "bg-green-500 hover:bg-green-400 text-white"
+                }`}
+                onClick={() => handleDelete(selectedSpecies)}
+              >
+                Yes, Delete
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-red-600 hover:bg-red-500 text-gray-100"
+                    : "bg-red-500 hover:bg-red-400 text-white"
+                }`}
+                onClick={closeModal}
+              >
+                No, Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      <ToastContainer />
     </div>
   );
 }

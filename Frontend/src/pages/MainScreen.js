@@ -126,7 +126,7 @@ function MainScreen() {
 
       <div
         className={`fixed top-15 left-0 h-full bg-gray-200 ${
-          darkMode ? "bg-zinc-800" : "bg-zinc-100"
+          darkMode ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-800"
         } shadow-lg transition-transform duration-500 z-50 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}

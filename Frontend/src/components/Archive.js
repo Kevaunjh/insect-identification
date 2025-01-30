@@ -72,7 +72,7 @@ function Archive() {
       </div>
       <div className="flex h-full w-full p-4">
         {loading ? (
-          <p className="text-lg mx-auto">Loading recent species data...</p>
+          <p className="text-lg mx-auto">Loading Archived Species Data</p>
         ) : (
           <div className="flex flex-col w-full space-y-4">
             {filteredSpeciesData.map((species, index) => (
