@@ -43,8 +43,6 @@ from bson import ObjectId
 def get_alldata():
     try:
         data = list(collection.find({}).sort("_id", -1))
-        
-        # Convert ObjectId to string
         for item in data:
             item["_id"] = str(item["_id"])
 
@@ -64,7 +62,9 @@ def get_speciesinfo():
 @app.route("/api/archivespecies", methods=["GET"])
 def get_archivespecies():
     try:
-        data = list(archivespecies.find({}, {"_id": 0}).sort("_id", -1)) 
+        data = list(archivespecies.find({}).sort("_id", -1)) 
+        for item in data:
+            item["_id"] = str(item["_id"])
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -95,6 +95,29 @@ def remove_species():
             return jsonify({"error": "Species not found"}), 404
 
         result = collection.delete_one({"_id": ObjectId(species_id)})
+
+        if result.deleted_count == 1:
+            return jsonify({"message": "Species removed successfully", "id": species_id}), 200
+        else:
+            return jsonify({"error": "Backend cannot remove the species "}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/delarchive", methods=["DELETE"])
+def remove_archive():
+    try:
+        data = request.get_json()
+        if not data or "id" not in data:
+            return jsonify({"error": "ID is required to remove a species"}), 400
+
+        species_id = data["id"]
+
+        species = archivespecies.find_one({"_id": ObjectId(species_id)})
+        if not species:
+            return jsonify({"error": "Species not found"}), 404
+
+        result = archivespecies.delete_one({"_id": ObjectId(species_id)})
 
         if result.deleted_count == 1:
             return jsonify({"message": "Species removed successfully", "id": species_id}), 200

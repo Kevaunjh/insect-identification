@@ -2,6 +2,8 @@ import React, { useEffect, useState, useContext } from "react";
 import Modal from "react-modal";
 import { DarkModeContext } from "../context/DarkModeContext";
 import { FaTrash } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Archive() {
   const { darkMode } = useContext(DarkModeContext);
@@ -10,6 +12,7 @@ function Archive() {
   const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState("");
+  const [deleteModel, setDeleteModel] = useState(false);
 
   const fetchRecentSpecies = async () => {
     try {
@@ -25,13 +28,6 @@ function Archive() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchRecentSpecies();
-    const interval = setInterval(fetchRecentSpecies, 20000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const openModal = (species) => {
     setSelectedSpecies(species);
@@ -49,6 +45,52 @@ function Archive() {
         species.name.toLowerCase().includes(text)
       )
     );
+  };
+
+  const deleteSpecies = (species) => {
+    setSelectedSpecies(null);
+    setDeleteModel(false);
+
+    fetch("http://127.0.0.1:5000/api/delarchive", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: species._id }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data.message || `Failed to delete species: ${response.statusText}`
+          );
+        }
+        return data;
+      })
+      .then((data) => {
+        console.log("Species successfully deleted:", data);
+        toast.success("Species deleted successfully!");
+        setRecentSpeciesData((prev) =>
+          prev.filter((item) => item._id !== species._id)
+        );
+        setFilteredSpeciesData((prev) =>
+          prev.filter((item) => item._id !== species._id)
+        );
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        toast.error(`Deletion failed: ${error.message}`);
+        fetchRecentSpecies();
+      });
+  };
+
+  const openDeleteModel = (species) => {
+    setSelectedSpecies(species);
+    setDeleteModel(true);
+  };
+
+  const handleDelete = (species) => {
+    deleteSpecies(species);
   };
 
   return (
@@ -72,7 +114,7 @@ function Archive() {
       </div>
       <div className="flex h-full w-full p-4">
         {loading ? (
-          <p className="text-lg mx-auto">Loading Archived Species Data</p>
+          <p className="text-lg mx-auto">Loading Archived Species Data...</p>
         ) : (
           <div className="flex flex-col w-full space-y-4">
             {filteredSpeciesData.map((species, index) => (
@@ -118,7 +160,13 @@ function Archive() {
                       </div>
                     </div>
                     <div className="flex items-end">
-                      <FaTrash className="mr-2 ml-2 z-10" />
+                      <FaTrash
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModel(species);
+                        }}
+                        className="mr-2 ml-2 z-10"
+                      />
                     </div>
                   </div>
                 </div>
@@ -127,7 +175,7 @@ function Archive() {
           </div>
         )}
       </div>
-      {selectedSpecies && (
+      {selectedSpecies && !deleteModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
@@ -198,6 +246,64 @@ function Archive() {
           </div>
         </Modal>
       )}
+      {deleteModel && (
+        <Modal
+          isOpen={!!selectedSpecies}
+          onRequestClose={closeModal}
+          contentLabel="Species Details"
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-full sm:h-auto mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
+            darkMode
+              ? "bg-gray-800 text-gray-100 border-gray-600"
+              : "bg-white text-gray-900 border-gray-300"
+          }`}
+          overlayClassName="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center"
+        >
+          <div className="flex flex-col items-center space-y-6">
+            <h1
+              className={`text-xl font-bold text-center ${
+                darkMode ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
+              Delete this species?
+            </h1>
+            <div
+              className={`w-full rounded-md p-4 flex items-center justify-center text-center ${
+                darkMode
+                  ? "bg-gray-700 text-gray-200"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              <p>
+                Are you sure you would like to delete this species from the
+                database? This action is permanent and cannot be reversed.
+              </p>
+            </div>
+            <div className="flex justify-center gap-4 w-full">
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-green-600 hover:bg-green-500 text-gray-100"
+                    : "bg-green-500 hover:bg-green-400 text-white"
+                }`}
+                onClick={() => handleDelete(selectedSpecies)}
+              >
+                Yes, Delete
+              </button>
+              <button
+                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
+                  darkMode
+                    ? "bg-red-600 hover:bg-red-500 text-gray-100"
+                    : "bg-red-500 hover:bg-red-400 text-white"
+                }`}
+                onClick={closeModal}
+              >
+                No, Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      <ToastContainer />
     </div>
   );
 }

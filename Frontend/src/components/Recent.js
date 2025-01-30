@@ -141,7 +141,6 @@ function Species() {
       .catch((error) => {
         console.error("Error:", error);
         toast.error(`Deletion failed: ${error.message}`);
-        // Optionally refetch data to ensure sync
         fetchRecentSpecies();
       });
   };

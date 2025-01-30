@@ -46,6 +46,9 @@ function Home({}) {
     };
 
     fetchSpeciesData();
+    const interval = setInterval(fetchSpeciesData, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
