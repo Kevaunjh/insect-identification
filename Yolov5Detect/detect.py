@@ -494,11 +494,23 @@ def run(
                 cv2.waitKey(1)  # 1 millisecond
 
             # Save results (image with detections)
-            if save_img:
+# Initialize last saved time for stream handling
+  # Initialize last saved time for stream handling
+            last_saved_time = 0  
+
+            # Save results (image with detections)
+            if save_img and len(det):  # Only proceed if detections are found
                 if dataset.mode == "image":
                     cv2.imwrite(save_path, im0)
                     save_to_db(species_name, save_path, confidence)
-                else:  # 'video' or 'stream'
+                elif dataset.mode == "stream":  # Handle live stream separately
+                    current_time = time.time()
+                    if current_time - last_saved_time >= 10:  # Save image every 5 seconds
+                        save_path_img = str(Path(save_path).with_suffix(".jpg"))
+                        cv2.imwrite(save_path_img, im0)
+                        save_to_db(species_name, save_path_img, confidence)
+                        last_saved_time = current_time
+                else:  # video
                     if vid_path[i] != save_path:  # new video
                         vid_path[i] = save_path
                         if isinstance(vid_writer[i], cv2.VideoWriter):
@@ -507,14 +519,14 @@ def run(
                             fps = vid_cap.get(cv2.CAP_PROP_FPS)
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        else:  # stream
+                        else:  # default values
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
                         save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
 
-        # Print time (inference-only)
-        LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
+            # Print time (inference-only)
+            LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
 
 
     # Print results
