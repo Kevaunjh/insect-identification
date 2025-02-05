@@ -41,6 +41,7 @@ import requests
 import torch
 import requests
 import json
+import time
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -524,6 +525,13 @@ def run(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
+def run_detection():
+    """Runs the detection with default parameters every 20 seconds."""
+    opt = parse_opt()
+    while True:
+        main(opt)
+        print("Waiting for 20 seconds before next detection...")
+        time.sleep(20)  # Wait for 20 seconds before running again
 
 def parse_opt():
     """
@@ -608,6 +616,8 @@ def parse_opt():
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
     return opt
+
+
 
 
 def main(opt):
