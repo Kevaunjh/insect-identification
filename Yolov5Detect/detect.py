@@ -87,13 +87,6 @@ if os.path.exists(Species_Path):
 else:
     holding_species = []
         
-
-def internet_on():
-    try:
-        response = requests.get('https://www.google.com', timeout=3)  
-        return response.status_code == 200  
-    except requests.exceptions.RequestException:
-        return False 
     
 
 import json
@@ -102,14 +95,7 @@ import base64
 import random
 from datetime import datetime
 from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-
-def internet_connection():
-    try:
-        response = requests.get("https://dns.tutorialspoint.com", timeout=3)
-        return True
-    except requests.ConnectionError:
-        return False    
+from pymongo.server_api import ServerApi  
 
 import os
 import json
@@ -120,6 +106,64 @@ from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
 MIN_CONFIDENCE = 70  # Set minimum confidence threshold
+
+# Online/Offline Data Handling:
+# 1. Check if internet is available (only run once at the start)
+# 2. If internet is available, save to MongoDB and clear local JSON file
+# 3. If internet is not available, nothing is saved to MongoDB
+# 4. Run detection on images (run continuously with each detection)
+# 5. If internet is available, upload local files to MongoDB and save images to DB every 10 seconds
+# 6. If internet is not available, save images to local JSON file every 10 seconds
+    
+justConnected = False
+
+def startup():
+    """Check internet connection and upload any offline data to MongoDB."""
+    json_file = "holding_species.json"
+    if internet_on():
+        print("Internet available. Uploading data to MongoDB...")
+
+        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
+        client = MongoClient(uri, server_api=ServerApi('1'))
+        db = client["insect_identification"]
+        collection = db["species"]
+
+        try:
+            client.admin.command('ping')
+            print("Connected to MongoDB!")
+
+            # If offline data exists, process it first
+            if os.path.exists(json_file):
+                with open(json_file, "r") as file:
+                    try:
+                        offline_data = json.load(file)
+                        if not isinstance(offline_data, list):
+                            offline_data = [offline_data]
+                    except json.JSONDecodeError:
+                        offline_data = []
+
+                for record in offline_data:
+                    try:
+                        print(f"Uploading {record['name']}...")
+                        with open(record["image"], "rb") as img_file:
+                            record["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+
+                        collection.insert_one(record)
+                        print(f"Uploaded offline record: {record['name']} ({record['scientific_name']})")
+
+                    except FileNotFoundError:
+                        print(f"Error: File not found at {record['image']}. Skipping.")
+                    except Exception as e:
+                        print(f"Error uploading offline record: {e}")
+
+                # Clear local storage after successful upload
+                os.remove(json_file)
+                print("Offline data successfully uploaded and cleared.")
+                       
+        except Exception as e:
+            print(f"Error saving to MongoDB: {e}")
+    
+        
 
 def internet_on():
     """Check if the internet is available by attempting to connect to Google."""
@@ -188,80 +232,49 @@ def save_to_db(species_name, image_path, confidence):
         "date": current_date,
         "time": current_time,
     }
-
-    json_file = "holding_species.json"
     
+    json_file = "holding_species.json"
+
     if not internet_on():
         print("No internet. Saving data locally.")
+        justConnected = False
         if os.path.exists(json_file):
             with open(json_file, "r") as file:
                 try:
                     existing_data = json.load(file)
                     if not isinstance(existing_data, list):
-                        existing_data = [existing_data]
+                            existing_data = [existing_data]
                 except json.JSONDecodeError:
-                    existing_data = []
+                        existing_data = []
         else:
             existing_data = []
 
         existing_data.append(data)
-
-        # Save back to local JSON file
         with open(json_file, "w") as file:
             json.dump(existing_data, file, indent=4)
 
         print(f"Data saved locally: {species_name} ({scientific_name})")
-    
+        
+    elif not justConnected:
+        startup()
+        justConnected = True
+        
     else:
-        print("Internet available. Uploading data to MongoDB...")
-
         uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
         client = MongoClient(uri, server_api=ServerApi('1'))
         db = client["insect_identification"]
         collection = db["species"]
-
-        try:
-            client.admin.command('ping')
-            print("Connected to MongoDB!")
-
-            # If offline data exists, process it first
-            if os.path.exists(json_file):
-                with open(json_file, "r") as file:
-                    try:
-                        offline_data = json.load(file)
-                        if not isinstance(offline_data, list):
-                            offline_data = [offline_data]
-                    except json.JSONDecodeError:
-                        offline_data = []
-
-                for record in offline_data:
-                    try:
-                        print(f"Uploading {record['name']}...")
-                        with open(record["image"], "rb") as img_file:
-                            record["image"] = base64.b64encode(img_file.read()).decode("utf-8")
-
-                        collection.insert_one(record)
-                        print(f"Uploaded offline record: {record['name']} ({record['scientific_name']})")
-
-                    except FileNotFoundError:
-                        print(f"Error: File not found at {record['image']}. Skipping.")
-                    except Exception as e:
-                        print(f"Error uploading offline record: {e}")
-
-                # Clear local storage after successful upload
-                os.remove(json_file)
-                print("Offline data successfully uploaded and cleared.")
-
-            # Upload the new detection last
-            print(f"Uploading {species_name}...")
-            with open(image_path, "rb") as img_file:
-                data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
-
+        print(f"Uploading {species_name}...")
+        with open(image_path, "rb") as img_file:
+            data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
             collection.insert_one(data)
             print(f"Uploaded new entry: {species_name} ({scientific_name})")
-        
-        except Exception as e:
-            print(f"Error saving to MongoDB: {e}")
+
+    
+
+
+            
+ 
 
 
     
@@ -380,6 +393,8 @@ def run(
 
 
     start = 0
+
+    startup()
      
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
