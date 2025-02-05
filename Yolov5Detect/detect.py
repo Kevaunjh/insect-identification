@@ -263,6 +263,7 @@ def save_to_db(species_name, image_path, confidence):
         except Exception as e:
             print(f"Error saving to MongoDB: {e}")
 
+
     
 @smart_inference_mode()
 def run(
@@ -377,6 +378,9 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
+
+    start = 0
+     
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(device=device), Profile(device=device), Profile(device=device))
@@ -424,7 +428,7 @@ def run(
                     writer.writeheader()
                 writer.writerow(data)
                 
-        
+    
 
         # Process predictions
         for i, det in enumerate(pred):  # per image
@@ -491,21 +495,15 @@ def run(
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
                 
-            last_saved_time = 0  
-
-            # Save results (image with detections)
             if save_img and len(det) and confidence > 0.7:  # Only proceed if detections are found and above confidence level
-                if dataset.mode == "image":
-                    save_path_img = str(Path(save_path).with_suffix(".jpg"))  # Ensure it's saved as an image
-                    cv2.imwrite(save_path_img, im0)
-                    save_to_db(species_name, save_path_img, confidence)
-                elif dataset.mode == "stream":  # Handle live stream separately
-                    current_time = time.time()
-                    if current_time - last_saved_time >= 1000:  # Save image every 10 seconds
+                if dataset.mode == "stream":  # Handle live stream separately
+                    if start >= 30:  # Save image every 10 seconds
                         save_path_img = str(Path(save_path).with_suffix(".jpg"))
                         cv2.imwrite(save_path_img, im0)
                         save_to_db(species_name, save_path_img, confidence)  # Send to DB only every 10 seconds
-                        last_saved_time = current_time  # Update last saved time
+                        print("Time elapsed: ", start)
+                        start = 0
+                          # Update last saved time
                 else:  # video
                     if vid_path[i] != save_path:  # new video
                         vid_path[i] = save_path
@@ -520,7 +518,8 @@ def run(
                         save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
-
+            start += 1
+            print("Timer: ", start)
             # Print time (inference-only)
             LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
 
