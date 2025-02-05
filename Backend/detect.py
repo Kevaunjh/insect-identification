@@ -30,13 +30,17 @@ Usage - formats:
 
 import argparse
 import csv
+from datetime import datetime
 import os
 import platform
 import sys
 from pathlib import Path
 import base64
-
+import random
+import requests
 import torch
+import requests
+import json
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -69,31 +73,199 @@ from utils.torch_utils import select_device, smart_inference_mode
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
-client = MongoClient(uri, server_api=ServerApi('1'))
-db = client["insect_identification"]
-collection = db["species"]
 
+Species_Path = "/holding_species.json"
+if os.path.exists(Species_Path):
+    with open(Species_Path, "r") as file:
+        try:
+            holding_species = json.load(file)
+            print("Loaded holding species from local storage.")
+        except json.JSONDecodeError:
+            holding_species = []
+            print("Error loading holding species from local storage. Using empty list.")
+else:
+    holding_species = []
+        
+
+def internet_on():
+    try:
+        response = requests.get('https://www.google.com', timeout=3)  
+        return response.status_code == 200  
+    except requests.exceptions.RequestException:
+        return False 
+    
+
+import json
+import os
+import base64
+import random
+from datetime import datetime
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+
+def internet_connection():
+    try:
+        response = requests.get("https://dns.tutorialspoint.com", timeout=3)
+        return True
+    except requests.ConnectionError:
+        return False    
+if internet_connection():
+    print("The Internet is connected.")
+else:
+    print("The Internet is not connected.")
+
+import os
+import json
+import random
+import base64
+import datetime
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+
+MIN_CONFIDENCE = 50  # Set minimum confidence threshold
+
+def internet_on():
+    """Check if the internet is available by attempting to connect to Google."""
+    try:
+        import socket
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
 
 def save_to_db(species_name, image_path, confidence):
-    """Save detected species information to MongoDB."""
-    with open(image_path, "rb") as img_file:
-        encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
-    confidence = round(confidence,2) * 100
+    """Save detected species information to MongoDB or local JSON based on internet availability."""
+    
+    species_mapping = {
+        "box tree moth": "Cydalima perspectalis",
+        "northern hornet": "Vespa crabro",
+        "spotted lanternfly": "Lycorma delicatula",
+        "japanese beetle": "Popillia japonica",
+        "stink bugs": "Pentatomidae",
+        "ant": "Formicidae",
+        "bumble bee": "Bombus",
+        "ladybug": "Coccinellidae",
+        "monarch butterfly": "Danaus plexippus",
+        "wolf spider": "Lycosidae",
+        "creeping thistle": "Cirsium arvense",
+        "himalayan balsam": "Impatiens glandulifera",
+        "japanese knotweed": "Reynoutria japonica",
+        "leafy spurge": "Euphorbia esula",
+        "purple loosestrife": "Lythrum salicaria",
+        "common lilac": "Syringa vulgaris",
+        "common milkweed": "Asclepias syriaca",
+        "common yarrow": "Achillea millefolium",
+        "red osier dogwood": "Cornus sericea",
+        "staghorn sumac": "Rhus typhina",
+    }
+
+    # Get scientific name or default to "Unknown"
+    scientific_name = species_mapping.get(species_name.lower(), "Unknown")
+
+    # Convert confidence to percentage and check threshold
+    confidence = round(confidence * 100, 2)
+    if confidence < MIN_CONFIDENCE:
+        print(f"Detection skipped: {species_name} ({confidence}%) below confidence threshold ({MIN_CONFIDENCE}%)")
+        return
+
+    # Get current date and time
+    now = datetime.datetime.now()
+    current_date = now.strftime("%Y-%m-%d")
+    current_time = now.strftime("%H:%M:%S")
+
+    # Generate random latitude and longitude
+    latitude = round(random.uniform(-90.0, 90.0), 6)
+    longitude = round(random.uniform(-180.0, 180.0), 6)
+
+    # Data structure for entry
     data = {
         "name": species_name,
-        "species": "Unknown",
-        "habitat": "Unknown habitat",
+        "scientific_name": scientific_name,
         "temperature": "Unknown temperature",
         "light": "Unknown light",
         "heat": "Unknown heat",
-        "image": encoded_image,
-        "latitude": "",
+        "image": image_path, 
+        "latitude": latitude,
+        "longitude": longitude,
         "confidence": confidence,
+        "date": current_date,
+        "time": current_time,
     }
-    collection.insert_one(data)
-    print(f"Data for species '{species_name}' saved to MongoDB.")
+
+    json_file = "holding_species.json"
     
+    if not internet_on():
+        print("No internet. Saving data locally.")
+        if os.path.exists(json_file):
+            with open(json_file, "r") as file:
+                try:
+                    existing_data = json.load(file)
+                    if not isinstance(existing_data, list):
+                        existing_data = [existing_data]
+                except json.JSONDecodeError:
+                    existing_data = []
+        else:
+            existing_data = []
+
+        existing_data.append(data)
+
+        # Save back to local JSON file
+        with open(json_file, "w") as file:
+            json.dump(existing_data, file, indent=4)
+
+        print(f"Data saved locally: {species_name} ({scientific_name})")
+    
+    else:
+        print("Internet available. Uploading data to MongoDB...")
+
+        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
+        client = MongoClient(uri, server_api=ServerApi('1'))
+        db = client["insect_identification"]
+        collection = db["species"]
+
+        try:
+            client.admin.command('ping')
+            print("Connected to MongoDB!")
+
+            # If offline data exists, process it first
+            if os.path.exists(json_file):
+                with open(json_file, "r") as file:
+                    try:
+                        offline_data = json.load(file)
+                        if not isinstance(offline_data, list):
+                            offline_data = [offline_data]
+                    except json.JSONDecodeError:
+                        offline_data = []
+
+                for record in offline_data:
+                    try:
+                        print(f"Uploading {record['name']}...")
+                        with open(record["image"], "rb") as img_file:
+                            record["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+
+                        collection.insert_one(record)
+                        print(f"Uploaded offline record: {record['name']} ({record['scientific_name']})")
+
+                    except FileNotFoundError:
+                        print(f"Error: File not found at {record['image']}. Skipping.")
+                    except Exception as e:
+                        print(f"Error uploading offline record: {e}")
+
+                # Clear local storage after successful upload
+                os.remove(json_file)
+                print("Offline data successfully uploaded and cleared.")
+
+            # Upload the new detection last
+            print(f"Uploading {species_name}...")
+            with open(image_path, "rb") as img_file:
+                data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+
+            collection.insert_one(data)
+            print(f"Uploaded new entry: {species_name} ({scientific_name})")
+        
+        except Exception as e:
+            print(f"Error saving to MongoDB: {e}")
+
     
 @smart_inference_mode()
 def run(
