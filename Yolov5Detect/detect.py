@@ -114,10 +114,28 @@ if internet_connection():
 else:
     print("The Internet is not connected.")
 
-def save_to_db(species_name, image_path, confidence):
-    """Save detected species information to MongoDB with date, time, scientific name, and random geolocation."""
+import os
+import json
+import random
+import base64
+import datetime
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
-    # Mapping of species names to their scientific names
+MIN_CONFIDENCE = 50  # Set minimum confidence threshold
+
+def internet_on():
+    """Check if the internet is available by attempting to connect to Google."""
+    try:
+        import socket
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
+
+def save_to_db(species_name, image_path, confidence):
+    """Save detected species information to MongoDB or local JSON based on internet availability."""
+    
     species_mapping = {
         "box tree moth": "Cydalima perspectalis",
         "northern hornet": "Vespa crabro",
@@ -141,37 +159,32 @@ def save_to_db(species_name, image_path, confidence):
         "staghorn sumac": "Rhus typhina",
     }
 
-    # Get the scientific name or default to "Unknown"
+    # Get scientific name or default to "Unknown"
     scientific_name = species_mapping.get(species_name.lower(), "Unknown")
 
-    # Read and encode the image
-    try:
-        with open(image_path, "rb") as img_file:
-            encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
-    except FileNotFoundError:
-        print(f"Error: File not found at {image_path}. Skipping this record.")
-        return
-    except Exception as e:
-        print(f"Unexpected error while reading the file: {e}")
+    # Convert confidence to percentage and check threshold
+    confidence = round(confidence * 100, 2)
+    if confidence < MIN_CONFIDENCE:
+        print(f"Detection skipped: {species_name} ({confidence}%) below confidence threshold ({MIN_CONFIDENCE}%)")
         return
 
-    # Round confidence and get the current date and time
-    confidence = round(confidence, 2) * 100
-    now = datetime.now()
+    # Get current date and time
+    now = datetime.datetime.now()
     current_date = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M:%S")
 
-    latitude = round(random.uniform(-90.0, 90.0), 6)  # Latitude range: -90 to 90
-    longitude = round(random.uniform(-180.0, 180.0), 6)  # Longitude range: -180 to 180
+    # Generate random latitude and longitude
+    latitude = round(random.uniform(-90.0, 90.0), 6)
+    longitude = round(random.uniform(-180.0, 180.0), 6)
 
-
+    # Data structure for entry
     data = {
         "name": species_name,
         "scientific_name": scientific_name,
         "temperature": "Unknown temperature",
         "light": "Unknown light",
         "heat": "Unknown heat",
-        "image": encoded_image,
+        "image": image_path, 
         "latitude": latitude,
         "longitude": longitude,
         "confidence": confidence,
@@ -179,11 +192,31 @@ def save_to_db(species_name, image_path, confidence):
         "time": current_time,
     }
 
-    InternetChecker = internet_on()
+    json_file = "holding_species.json"
+    
+    if not internet_on():
+        print("No internet. Saving data locally.")
+        if os.path.exists(json_file):
+            with open(json_file, "r") as file:
+                try:
+                    existing_data = json.load(file)
+                    if not isinstance(existing_data, list):
+                        existing_data = [existing_data]
+                except json.JSONDecodeError:
+                    existing_data = []
+        else:
+            existing_data = []
 
-    if InternetChecker:
-        print('Internet is connected.')
-        print('The confidence level is:', confidence)
+        existing_data.append(data)
+
+        # Save back to local JSON file
+        with open(json_file, "w") as file:
+            json.dump(existing_data, file, indent=4)
+
+        print(f"Data saved locally: {species_name} ({scientific_name})")
+    
+    else:
+        print("Internet available. Uploading data to MongoDB...")
 
         uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
         client = MongoClient(uri, server_api=ServerApi('1'))
@@ -192,36 +225,46 @@ def save_to_db(species_name, image_path, confidence):
 
         try:
             client.admin.command('ping')
-            print("Pinged your deployment. You successfully connected to MongoDB!")
-        except Exception as e:
-            print(e)
-            InternetChecker = False 
+            print("Connected to MongoDB!")
 
-    if confidence > 60:
-        if InternetChecker:
-            try:
-                collection.insert_one(data)
-                print(f"Data for species '{species_name}' (Scientific Name: {scientific_name}) saved to MongoDB on {current_date} at {current_time}. Location: ({latitude}, {longitude}).")
-            except Exception as e:
-                print(f"Error saving to MongoDB: {e}")
-        else:
-            json_file = "holding_species.json"
+            # If offline data exists, process it first
             if os.path.exists(json_file):
                 with open(json_file, "r") as file:
                     try:
-                        existing_data = json.load(file)
-                        if not isinstance(existing_data, list):
-                            existing_data = [existing_data] 
+                        offline_data = json.load(file)
+                        if not isinstance(offline_data, list):
+                            offline_data = [offline_data]
                     except json.JSONDecodeError:
-                        existing_data = []
-            else:
-                existing_data = []
-            existing_data.append(data)
-            with open(json_file, "w") as file:
-                json.dump(existing_data, file, indent=4)
+                        offline_data = []
 
-            print(f"Data for species '{species_name}' (Scientific Name: {scientific_name}) saved to local storage on {current_date} at {current_time}. Location: ({latitude}, {longitude}).")
+                for record in offline_data:
+                    try:
+                        print(f"Uploading {record['name']}...")
+                        with open(record["image"], "rb") as img_file:
+                            record["image"] = base64.b64encode(img_file.read()).decode("utf-8")
 
+                        collection.insert_one(record)
+                        print(f"Uploaded offline record: {record['name']} ({record['scientific_name']})")
+
+                    except FileNotFoundError:
+                        print(f"Error: File not found at {record['image']}. Skipping.")
+                    except Exception as e:
+                        print(f"Error uploading offline record: {e}")
+
+                # Clear local storage after successful upload
+                os.remove(json_file)
+                print("Offline data successfully uploaded and cleared.")
+
+            # Upload the new detection last
+            print(f"Uploading {species_name}...")
+            with open(image_path, "rb") as img_file:
+                data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+
+            collection.insert_one(data)
+            print(f"Uploaded new entry: {species_name} ({scientific_name})")
+        
+        except Exception as e:
+            print(f"Error saving to MongoDB: {e}")
 
     
 @smart_inference_mode()
