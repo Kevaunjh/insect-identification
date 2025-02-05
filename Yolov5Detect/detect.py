@@ -454,10 +454,8 @@ def run(
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)
-                    if not c:
-                        species_name = names[c]
-                    else:
-                        species_name = "Unknown"
+                    species_name = names[c]
+
                     label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
@@ -492,24 +490,22 @@ def run(
                     cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
-
-            # Save results (image with detections)
-# Initialize last saved time for stream handling
-  # Initialize last saved time for stream handling
+                
             last_saved_time = 0  
 
             # Save results (image with detections)
-            if save_img and len(det):  # Only proceed if detections are found
+            if save_img and len(det) and confidence > 0.7:  # Only proceed if detections are found and above confidence level
                 if dataset.mode == "image":
-                    cv2.imwrite(save_path, im0)
-                    save_to_db(species_name, save_path, confidence)
+                    save_path_img = str(Path(save_path).with_suffix(".jpg"))  # Ensure it's saved as an image
+                    cv2.imwrite(save_path_img, im0)
+                    save_to_db(species_name, save_path_img, confidence)
                 elif dataset.mode == "stream":  # Handle live stream separately
                     current_time = time.time()
-                    if current_time - last_saved_time >= 10:  # Save image every 5 seconds
+                    if current_time - last_saved_time >= 1000:  # Save image every 10 seconds
                         save_path_img = str(Path(save_path).with_suffix(".jpg"))
                         cv2.imwrite(save_path_img, im0)
-                        save_to_db(species_name, save_path_img, confidence)
-                        last_saved_time = current_time
+                        save_to_db(species_name, save_path_img, confidence)  # Send to DB only every 10 seconds
+                        last_saved_time = current_time  # Update last saved time
                 else:  # video
                     if vid_path[i] != save_path:  # new video
                         vid_path[i] = save_path
