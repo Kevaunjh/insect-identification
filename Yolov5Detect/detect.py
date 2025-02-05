@@ -110,10 +110,6 @@ def internet_connection():
         return True
     except requests.ConnectionError:
         return False    
-if internet_connection():
-    print("The Internet is connected.")
-else:
-    print("The Internet is not connected.")
 
 import os
 import json
@@ -123,7 +119,7 @@ import datetime
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-MIN_CONFIDENCE = 50  # Set minimum confidence threshold
+MIN_CONFIDENCE = 70  # Set minimum confidence threshold
 
 def internet_on():
     """Check if the internet is available by attempting to connect to Google."""
@@ -427,6 +423,8 @@ def run(
                 if not file_exists:
                     writer.writeheader()
                 writer.writerow(data)
+                
+        
 
         # Process predictions
         for i, det in enumerate(pred):  # per image
@@ -456,7 +454,10 @@ def run(
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)
-                    species_name = names[c]
+                    if not c:
+                        species_name = names[c]
+                    else:
+                        species_name = "Unknown"
                     label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
@@ -511,10 +512,10 @@ def run(
                         save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
-                    save_to_db(species_name, save_path)
 
         # Print time (inference-only)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
+
 
     # Print results
     t = tuple(x.t / seen * 1e3 for x in dt)  # speeds per image
@@ -525,13 +526,6 @@ def run(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
-def run_detection():
-    """Runs the detection with default parameters every 20 seconds."""
-    opt = parse_opt()
-    while True:
-        main(opt)
-        print("Waiting for 20 seconds before next detection...")
-        time.sleep(20)  # Wait for 20 seconds before running again
 
 def parse_opt():
     """
@@ -645,7 +639,6 @@ def main(opt):
     """
     check_requirements(ROOT / "requirements.txt", exclude=("tensorboard", "thop"))
     run(**vars(opt))
-
 
 if __name__ == "__main__":
     opt = parse_opt()
