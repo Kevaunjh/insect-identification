@@ -132,7 +132,7 @@ function Maps() {
         </MapContainer>
       </div>
       <button
-        className="absolute top-20 left-3 z-50 bg-white p-2 rounded-md shadow-lg border border-black"
+        className="absolute top-20 left-2.5 z-50 bg-white p-2 rounded-md shadow-lg border border-black"
         onClick={() => setHeatmap(!heatmap)}
       >
         {heatmap ? <FaMap /> : <FaSun />}
