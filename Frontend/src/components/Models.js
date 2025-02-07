@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const insectData = [
-  { name: "Box Tree Moth", modelId: "49101ecdc0464f3ebe01999db85a0c1e" },
+  { name: "Box Tree Moth", modelId: "2949ae402083404ca44d0443b4304790" },
   { name: "Northern Hornet", modelId: "4115611dc93443099e8ecf17623aa533" },
   { name: "Spotted Lanternfly", modelId: "59121bc98ec04bd6a7b735180b6c6a76" },
   { name: "Japanese Beetle", modelId: "4dbca70bdfde4408ab0ab7adcbf6b74a" },

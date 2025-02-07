@@ -5,6 +5,7 @@ import Archive from "../components/Archive";
 import Species from "../components/Species";
 import Maps from "../components/Maps";
 import Models from "../components/Models";
+import Graph from "../components/Graph";
 import {
   FaSync,
   FaBars,
@@ -16,6 +17,7 @@ import {
   FaMap,
   FaArchive,
   FaCube,
+  FaChartLine,
 } from "react-icons/fa";
 import { DarkModeContext } from "../context/DarkModeContext";
 
@@ -90,6 +92,8 @@ function MainScreen() {
         return <Archive />;
       case "Models":
         return <Models />;
+      case "Graph":
+        return <Graph />;
       default:
         return <Home />;
     }
@@ -208,6 +212,18 @@ function MainScreen() {
             onClick={() => setSelectedTab("Models")}
           >
             <FaCube className="mr-8 text-2xl" /> Models
+          </li>
+          <li
+            className={`flex items-center cursor-pointer ${
+              selectedTab === "Graph"
+                ? darkMode
+                  ? "bg-green text-light-green"
+                  : "bg-light-green text-green"
+                : ""
+            } rounded-md pl-10 py-2`}
+            onClick={() => setSelectedTab("Graph")}
+          >
+            <FaChartLine className="mr-8 text-2xl" /> Graphs
           </li>
         </ul>
       </div>
