@@ -89,6 +89,32 @@ const Graph = () => {
     ],
   };
 
+  const chartOptions = {
+    plugins: {
+      title: {
+        display: true,
+        text: "Species Detection Over Time",
+        font: {
+          size: 20,
+        },
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: "Date",
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Number Found",
+        },
+      },
+    },
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] w-full p-4">
       <div className="w-3/4 flex items-center justify-center p-4 border-r border-gray-300">
@@ -96,12 +122,11 @@ const Graph = () => {
           <p className="text-center">Loading...</p>
         ) : speciesData.length > 0 ? (
           <div className="w-full">
-            <Line data={chartData} />
+            <Line data={chartData} options={chartOptions} />
           </div>
         ) : (
           <p className="text-center">
-            There is no available data for this species. Send the rover out to
-            find some!
+            No data available for the current species.
           </p>
         )}
       </div>
