@@ -134,7 +134,7 @@ const Graph = () => {
         {loading ? (
           <p className="text-center">Loading species...</p>
         ) : speciesList.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {speciesList.map((species) => (
               <button
                 key={species.name}

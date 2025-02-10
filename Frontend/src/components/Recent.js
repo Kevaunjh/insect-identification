@@ -90,6 +90,8 @@ function Species() {
       heat: species.heat,
       date: species.date,
       time: species.time,
+      longitude: species.longitude,
+      latitude: species.latitude,
     };
     fetch("http://127.0.0.1:5000/api/archivespecies", {
       method: "POST",
