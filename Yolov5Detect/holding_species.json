@@ -1,0 +1,15 @@
+[
+    {
+        "name": "Ladybug",
+        "scientific_name": "Coccinellidae",
+        "temperature": "Unknown temperature",
+        "light": "Unknown light",
+        "heat": "Unknown heat",
+        "image": "runs\\detect\\exp8\\detection_2\\0.jpg",
+        "latitude": -50.02045,
+        "longitude": 119.157126,
+        "confidence": 75.53,
+        "date": "2025-02-12",
+        "time": "14:32:09"
+    }
+]

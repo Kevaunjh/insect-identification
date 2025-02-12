@@ -43,6 +43,7 @@ import requests
 import json
 import time
 import pathlib
+import threading  # added import
 # Only need on linux
 # pathlib.WindowsPath = pathlib.PosixPath
 
@@ -178,6 +179,14 @@ def internet_on():
         return True
     except OSError:
         return False
+
+# New function to check wifi connection repeatedly in a background thread
+def check_wifi():
+    while True:
+        if not internet_on():
+            print("No internet connection. Running startup check...")
+            startup()
+        time.sleep(30)
 
 def save_to_db(species_name, image_path, confidence):
     """Save detected species information to MongoDB or local JSON based on internet availability."""
@@ -689,6 +698,9 @@ def main(opt):
     run(**vars(opt))
 
 if __name__ == "__main__":
+    # Start background thread for wifi check
+    wifi_thread = threading.Thread(target=check_wifi, daemon=True)
+    wifi_thread.start()
     
     opt = parse_opt()
     main(opt)
