@@ -42,6 +42,12 @@ import torch
 import requests
 import json
 import time
+import pathlib
+# Only need on linux
+# pathlib.WindowsPath = pathlib.PosixPath
+
+
+justConnected = False
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -115,7 +121,6 @@ MIN_CONFIDENCE = 70  # Set minimum confidence threshold
 # 5. If internet is available, upload local files to MongoDB and save images to DB every 10 seconds
 # 6. If internet is not available, save images to local JSON file every 10 seconds
     
-justConnected = False
 
 def startup():
     """Check internet connection and upload any offline data to MongoDB."""
@@ -176,7 +181,7 @@ def internet_on():
 
 def save_to_db(species_name, image_path, confidence):
     """Save detected species information to MongoDB or local JSON based on internet availability."""
-    
+    global justConnected
     species_mapping = {
         "box tree moth": "Cydalima perspectalis",
         "northern hornet": "Vespa crabro",
@@ -258,6 +263,15 @@ def save_to_db(species_name, image_path, confidence):
     elif not justConnected:
         startup()
         justConnected = True
+        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
+        client = MongoClient(uri, server_api=ServerApi('1'))
+        db = client["insect_identification"]
+        collection = db["species"]
+        print(f"Uploading {species_name}...")
+        with open(image_path, "rb") as img_file:
+            data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+            collection.insert_one(data)
+            print(f"Uploaded new entry: {species_name} ({scientific_name})")
         
     else:
         uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
@@ -269,12 +283,8 @@ def save_to_db(species_name, image_path, confidence):
             data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
             collection.insert_one(data)
             print(f"Uploaded new entry: {species_name} ({scientific_name})")
-
-    
-
-
             
- 
+
 
 
     
@@ -393,13 +403,15 @@ def run(
 
 
     start = 0
-
     startup()
+    detection_number = 1
+
      
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(device=device), Profile(device=device), Profile(device=device))
     for path, im, im0s, vid_cap, s in dataset:
+        
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -513,9 +525,20 @@ def run(
             if save_img and len(det) and confidence > 0.7:  # Only proceed if detections are found and above confidence level
                 if dataset.mode == "stream":  # Handle live stream separately
                     if start >= 30:  # Save image every 10 seconds
-                        save_path_img = str(Path(save_path).with_suffix(".jpg"))
+                        detection_number += 1  # Increment detection number
+                        detection_folder = f"detection_{detection_number}"  # Create folder name
+                        save_path_dir = Path(save_path).parent / detection_folder  # Define directory path
+
+                        # Ensure the directory exists
+                        os.makedirs(save_path_dir, exist_ok=True)
+
+                        # Save the image inside the new directory
+                        save_path_img = str((save_path_dir / Path(save_path).name).with_suffix(".jpg"))
                         cv2.imwrite(save_path_img, im0)
-                        save_to_db(species_name, save_path_img, confidence)  # Send to DB only every 10 seconds
+
+                        # Save to database
+                        save_to_db(species_name, save_path_img, confidence)
+
                         print("Time elapsed: ", start)
                         start = 0
                           # Update last saved time
@@ -663,5 +686,6 @@ def main(opt):
     run(**vars(opt))
 
 if __name__ == "__main__":
+    
     opt = parse_opt()
     main(opt)
