@@ -137,7 +137,7 @@ def startup():
             client.admin.command('ping')
             print("Connected to MongoDB!")
 
-            # If offline data exists, process it first
+      
             if os.path.exists(json_file):
                 with open(json_file, "r") as file:
                     try:
@@ -161,7 +161,7 @@ def startup():
                     except Exception as e:
                         print(f"Error uploading offline record: {e}")
 
-                # Clear local storage after successful upload
+          
                 os.remove(json_file)
                 print("Offline data successfully uploaded and cleared.")
                        
@@ -205,25 +205,24 @@ def save_to_db(species_name, image_path, confidence):
         "staghorn sumac": "Rhus typhina",
     }
 
-    # Get scientific name or default to "Unknown"
+
     scientific_name = species_mapping.get(species_name.lower(), "Unknown")
 
-    # Convert confidence to percentage and check threshold
+
     confidence = round(confidence * 100, 2)
     if confidence < MIN_CONFIDENCE:
         print(f"Detection skipped: {species_name} ({confidence}%) below confidence threshold ({MIN_CONFIDENCE}%)")
         return
 
-    # Get current date and time
     now = datetime.datetime.now()
     current_date = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M:%S")
 
-    # Generate random latitude and longitude
+
     latitude = round(random.uniform(-90.0, 90.0), 6)
     longitude = round(random.uniform(-180.0, 180.0), 6)
 
-    # Data structure for entry
+
     data = {
         "name": species_name,
         "scientific_name": scientific_name,
@@ -283,8 +282,12 @@ def save_to_db(species_name, image_path, confidence):
             data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
             collection.insert_one(data)
             print(f"Uploaded new entry: {species_name} ({scientific_name})")
-            
 
+    
+
+
+            
+ 
 
 
     

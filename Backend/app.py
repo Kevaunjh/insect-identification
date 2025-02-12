@@ -32,7 +32,7 @@ def get_species():
 @app.route("/api/location", methods=["GET"])
 def get_location():
     try:
-        data = collection.find({}, {"_id": 0, "latitude": 1, "longitude": 1})
+        data = collection.find({}, {"_id": 0, "latitude": 1, "longitude": 1, "image": 1, "name": 1})
         return jsonify(list(data)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -85,7 +85,7 @@ function Home({}) {
                     darkMode ? "text-zinc-200" : "text-zinc-800"
                   } text-center`}
                 >
-                  No Data Found
+                  Loading...
                 </p>
               )}
             </div>
@@ -96,14 +96,14 @@ function Home({}) {
             >
               <h2 className="text-xl font-bold text-center">
                 {speciesData.length > 0
-                  ? speciesData[0]?.name || "No Data Found"
-                  : "No Data Found"}
+                  ? speciesData[0]?.name || "Loading..."
+                  : "Loading..."}
               </h2>
               <p className="text-sm text-center ">
                 {speciesData.length > 0
                   ? `Confidence: ${speciesData[0]?.confidence}%` ||
-                    "No Data Found"
-                  : "No Data Found"}
+                    "Loading..."
+                  : "Loading..."}
               </p>
             </div>
           </div>
@@ -135,30 +135,30 @@ function Home({}) {
                     <strong>Fun Fact:</strong> {factsData.funFact}
                   </li>
                 ) : (
-                  <p>No facts available for this species</p>
+                  <p>Loading...</p>
                 )
               ) : speciesData.length > 0 ? (
                 <li>
                   <strong>Name:</strong>{" "}
-                  {speciesData[0].name || "No Data Found"}
+                  {speciesData[0].name || "Loading..."}
                   <br />
                   <strong>Species:</strong>{" "}
-                  {speciesData[0].scientific_name || "No Data Found"}
+                  {speciesData[0].scientific_name || "Loading..."}
                   <br />
                   <strong>Temperature:</strong>{" "}
-                  {speciesData[0].temperature || "No Data Found"}
+                  {speciesData[0].temperature || "Loading..."}
                   <br />
                   <strong>Light Level:</strong>{" "}
-                  {speciesData[0].light || "No Data Found"}
+                  {speciesData[0].light || "Loading..."}
                   <br />
                   <strong>Heat:</strong>{" "}
-                  {speciesData[0].heat || "No Data Found"}
+                  {speciesData[0].heat || "Loading..."}
                   <br />
                   <strong>Latitude:</strong>{" "}
-                  {speciesData[0].latitude || "No Data Found"}
+                  {speciesData[0].latitude || "Loading..."}
                   <br />
                   <strong>Longitude:</strong>{" "}
-                  {speciesData[0].longitude || "No Data Found"}
+                  {speciesData[0].longitude || "Loading..."}
                   <br />
                 </li>
               ) : (
