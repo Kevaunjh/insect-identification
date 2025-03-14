@@ -1,42 +1,48 @@
-import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import React, { useEffect, useState, useContext } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
-import "../index.css";
+import { FaMapMarkedAlt, FaFireAlt, FaLayerGroup, FaInfoCircle } from "react-icons/fa";
+import { DarkModeContext } from "../context/DarkModeContext";
 
-import { FaSun, FaMap } from "react-icons/fa";
-
+// Create custom markers with improved styling
 const blueMarker = new L.Icon({
   iconUrl: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-  iconSize: [30, 30],
-  iconAnchor: [15, 40],
-  popupAnchor: [1, -34],
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+  shadowUrl: null,
+  shadowSize: null,
+  shadowAnchor: null,
 });
 
 const yellowMarker = new L.Icon({
   iconUrl: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-  iconSize: [30, 30],
-  iconAnchor: [15, 40],
-  popupAnchor: [1, -34],
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+  shadowUrl: null,
+  shadowSize: null,
+  shadowAnchor: null,
 });
 
 const placeholderImage = "https://via.placeholder.com/100?text=No+Image";
 
-const SpeciesMarker = ({ position, name, image, icon }) => (
+const SpeciesMarker = ({ position, name, image, icon, date }) => (
   <Marker position={position} icon={icon}>
-    <Popup>
+    <Popup className="species-popup">
       <div className="text-center items-center flex-col flex">
-        <strong>{name}</strong>
+        <strong className="text-lg">{name}</strong>
         <img
           src={image || placeholderImage}
           alt={name}
-          className="mb-2 mt-1 w-28 h-28 border-2 rounded-xl object-cover"
+          className="my-2 w-28 h-28 border-2 border-gray-300 rounded-lg object-cover shadow-sm"
         />
-        <div>
-          <strong>Latitude:</strong> {position[0]}
-          <br />
-          <strong>Longitude:</strong> {position[1]}
+        <div className="text-sm mt-1">
+          <div><strong>Latitude:</strong> {position[0].toFixed(6)}</div>
+          <div><strong>Longitude:</strong> {position[1].toFixed(6)}</div>
+          {date && <div><strong>Date:</strong> {date}</div>}
         </div>
       </div>
     </Popup>
@@ -60,13 +66,13 @@ const HeatmapLayer = ({ data }) => {
       data.map((location) => [
         location.latitude,
         location.longitude,
-        location.intensity || 0.1,
+        location.intensity || 0.2,
       ]),
       {
         radius: 25,
-        blur: 20,
+        blur: 15,
         maxZoom: 17,
-        gradient: { 0.1: "blue", 0.5: "yellow", 1: "red" },
+        gradient: { 0.2: 'blue', 0.5: 'lime', 0.8: 'yellow', 1.0: 'red' },
       }
     ).addTo(map);
 
@@ -79,13 +85,18 @@ const HeatmapLayer = ({ data }) => {
 };
 
 function Maps() {
+  const { darkMode } = useContext(DarkModeContext);
   const [observations, setObservations] = useState([]);
   const [archiveSpecies, setArchiveSpecies] = useState([]);
   const [mostRecent, setMostRecent] = useState(null);
-  const [heatmap, setHeatmap] = useState(false);
+  const [mapMode, setMapMode] = useState("markers"); // "markers", "heatmap", "both"
   const [loading, setLoading] = useState(true);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
+    
+    // Fetch active observations
     fetch("http://127.0.0.1:5000/api/location")
       .then((response) => response.json())
       .then((data) => {
@@ -94,7 +105,7 @@ function Maps() {
           image: species.image
             ? `data:image/jpeg;base64,${species.image}`
             : null,
-          intensity: species.count >= 10 ? 1 : species.count >= 5 ? 0.5 : 0.1,
+          intensity: species.count >= 10 ? 1 : species.count >= 5 ? 0.6 : 0.2,
         }));
         setObservations(processedData);
         if (data.length > 0) {
@@ -104,9 +115,11 @@ function Maps() {
           ]);
         }
       })
-      .catch((error) => console.error("Error fetching observations:", error))
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        console.error("Error fetching observations:", error);
+      });
 
+    // Fetch archived species
     fetch("http://127.0.0.1:5000/api/archivespecies")
       .then((response) => response.json())
       .then((data) =>
@@ -116,16 +129,26 @@ function Maps() {
             image: species.image
               ? `data:image/jpeg;base64,${species.image}`
               : null,
+            intensity: 0.4,
           }))
         )
       )
-      .catch((error) =>
-        console.error("Error fetching archive species:", error)
-      );
+      .catch((error) => {
+        console.error("Error fetching archive species:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
+  const toggleMapMode = () => {
+    if (mapMode === "markers") setMapMode("heatmap");
+    else if (mapMode === "heatmap") setMapMode("both");
+    else setMapMode("markers");
+  };
+
   return (
-    <div className="relative flex flex-col items-center h-[calc(100vh-4rem)] w-full">
+    <div className="relative flex flex-col items-center h-[calc(100vh-4rem)] w-full fade-in">
       <div className="absolute inset-0 z-0">
         {!loading && mostRecent ? (
           <MapContainer
@@ -140,49 +163,104 @@ function Maps() {
             className="w-full h-full"
           >
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              url={darkMode 
+                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              }
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             <RecenterMap position={mostRecent} />
 
-            {!heatmap &&
-              observations.map((species, index) => (
-                <SpeciesMarker
-                  key={`observation-${index}`}
-                  position={[species.latitude, species.longitude]}
-                  name={species.name}
-                  image={species.image}
-                  icon={blueMarker}
-                />
-              ))}
+            {/* Show markers based on the current mode */}
+            {(mapMode === "markers" || mapMode === "both") && (
+              <>
+                {observations.map((species, index) => (
+                  <SpeciesMarker
+                    key={`observation-${index}`}
+                    position={[species.latitude, species.longitude]}
+                    name={species.name}
+                    image={species.image}
+                    icon={blueMarker}
+                    date={species.date}
+                  />
+                ))}
 
-            {!heatmap &&
-              archiveSpecies.map((species, index) => (
-                <SpeciesMarker
-                  key={`archive-${index}`}
-                  position={[species.latitude, species.longitude]}
-                  name={`Archive: ${species.name}`}
-                  image={species.image}
-                  icon={yellowMarker}
-                />
-              ))}
+                {archiveSpecies.map((species, index) => (
+                  <SpeciesMarker
+                    key={`archive-${index}`}
+                    position={[species.latitude, species.longitude]}
+                    name={`${species.name} (Archived)`}
+                    image={species.image}
+                    icon={yellowMarker}
+                    date={species.date}
+                  />
+                ))}
+              </>
+            )}
 
-            {heatmap && (
+            {/* Show heatmap based on the current mode */}
+            {(mapMode === "heatmap" || mapMode === "both") && (
               <HeatmapLayer data={[...observations, ...archiveSpecies]} />
             )}
           </MapContainer>
         ) : (
-          <div className="flex items-center justify-center h-full text-xl font-semibold">
-            Loading Map...
+          <div className="flex items-center justify-center h-full text-xl font-semibold bg-gray-100 dark:bg-gray-800">
+            <div className="text-center p-8">
+              <div className="inline-block animate-spin mb-4">
+                <FaMapMarkedAlt size={32} className="text-green dark:text-light-green" />
+              </div>
+              <p>Loading Map Data...</p>
+            </div>
           </div>
         )}
       </div>
-      <button
-        className="absolute top-20 left-2.5 z-50 bg-white p-2 rounded-md shadow-lg border border-black"
-        onClick={() => setHeatmap(!heatmap)}
-      >
-        {heatmap ? <FaMap /> : <FaSun />}
-      </button>
+      
+      {/* Map controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2">
+        <button
+          className={`p-3 rounded-full shadow-lg border border-gray-300 transition-colors duration-300 ${
+            darkMode ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-white text-gray-800 hover:bg-gray-100"
+          }`}
+          onClick={toggleMapMode}
+          title={`Current mode: ${mapMode}. Click to change.`}
+        >
+          {mapMode === "markers" && <FaMapMarkedAlt size={18} />}
+          {mapMode === "heatmap" && <FaFireAlt size={18} />}
+          {mapMode === "both" && <FaLayerGroup size={18} />}
+        </button>
+        
+        <button
+          className={`p-3 rounded-full shadow-lg border border-gray-300 transition-colors duration-300 ${
+            darkMode ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-white text-gray-800 hover:bg-gray-100"
+          }`}
+          onClick={() => setInfoOpen(!infoOpen)}
+          title="Map information"
+        >
+          <FaInfoCircle size={18} />
+        </button>
+      </div>
+      
+      {/* Info panel */}
+      {infoOpen && (
+        <div 
+          className={`absolute bottom-4 right-4 z-10 p-4 rounded-lg shadow-lg border max-w-xs transition-all duration-300 ${
+            darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-800 border-gray-300"
+          }`}
+        >
+          <h3 className="font-bold mb-2">Map Legend</h3>
+          <div className="flex items-center my-1">
+            <div className="w-4 h-4 rounded-full bg-blue-500 mr-2"></div>
+            <span>Current Observations</span>
+          </div>
+          <div className="flex items-center my-1">
+            <div className="w-4 h-4 rounded-full bg-yellow-500 mr-2"></div>
+            <span>Archived Species</span>
+          </div>
+          <div className="mt-2 text-sm">
+            <p>Toggle between marker view, heatmap, or both using the button above.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

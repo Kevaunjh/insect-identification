@@ -1,4 +1,6 @@
-import { useState } from "react";
+import React, { useState, useContext } from "react";
+import { DarkModeContext } from "../context/DarkModeContext";
+import { FaCube, FaTimes } from "react-icons/fa";
 
 const insectData = [
   { name: "Box Tree Moth", modelId: "2949ae402083404ca44d0443b4304790" },
@@ -15,29 +17,48 @@ const insectData = [
 
 const InsectCards = () => {
   const [selectedModel, setSelectedModel] = useState(null);
+  const { darkMode } = useContext(DarkModeContext);
 
   return (
-    <div className="flex flex-col items-center h-screen w-full p-4">
-      <h1 className="text-2xl font-bold mb-4">Insect 3D Models</h1>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {insectData.map((insect, index) => (
-          <button
-            key={index}
-            className="p-4 bg-gray-200 rounded-lg shadow-md hover:bg-gray-300 transition"
-            onClick={() => setSelectedModel(insect.modelId)}
-          >
-            <h2 className="text-lg font-semibold">{insect.name}</h2>
-          </button>
-        ))}
-      </div>
-      {selectedModel && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-80">
-          <div className="relative w-4/5 h-4/5">
+    <div className={`flex flex-col items-center min-h-[calc(100vh-4rem)] w-full p-6 transition-colors duration-500 ${
+      darkMode ? "bg-gray-800 text-white" : "bg-gray-50 text-gray-900"
+    }`}>
+      <div className="w-full max-w-6xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6 text-center">Insect 3D Models</h1>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {insectData.map((insect, index) => (
             <button
-              className="absolute top-2 right-2 bg-white p-2 rounded-full"
+              key={index}
+              className={`p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 text-center card card-hover ${
+                darkMode 
+                  ? "bg-gray-700 hover:bg-gray-600 border border-gray-600" 
+                  : "bg-white hover:bg-gray-100 border border-gray-200"
+              }`}
+              onClick={() => setSelectedModel(insect.modelId)}
+            >
+              <div className={`rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center ${
+                darkMode ? "bg-green text-white" : "bg-light-green text-green"
+              }`}>
+                <FaCube size={24} />
+              </div>
+              <h2 className="text-lg font-semibold">{insect.name}</h2>
+              <p className={`text-xs mt-1 ${
+                darkMode ? "text-gray-400" : "text-gray-500"
+              }`}>View 3D Model</p>
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {selectedModel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-80 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl h-[80vh] bg-black rounded-lg overflow-hidden">
+            <button
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
               onClick={() => setSelectedModel(null)}
             >
-              ❌
+              <FaTimes />
             </button>
             <iframe
               title="3D Model Viewer"
@@ -47,6 +68,7 @@ const InsectCards = () => {
               frameBorder="0"
               allow="autoplay; fullscreen; xr-spatial-tracking"
               allowFullScreen
+              className="rounded-lg"
             />
           </div>
         </div>

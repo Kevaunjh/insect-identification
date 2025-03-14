@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import Home from "../components/Home";
 import Recent from "../components/Recent";
 import Archive from "../components/Archive";
@@ -18,57 +18,25 @@ import {
   FaArchive,
   FaCube,
   FaChartLine,
+  FaTimes
 } from "react-icons/fa";
 import { DarkModeContext } from "../context/DarkModeContext";
 
 function MainScreen() {
-  const [speciesData, setSpeciesData] = useState([]);
-  const [factsData, setFactsData] = useState(null);
-  const [showFacts, setShowFacts] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { darkMode, setDarkMode } = useContext(DarkModeContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState("Home");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const fetchSpeciesData = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/species");
-      const result = await response.json();
-      if (result) {
-        setSpeciesData([result]);
-        fetchFactsData(result.name);
-      }
-    } catch (error) {
-      console.error("Error fetching species data:", error);
-    }
-  };
+  // Update isMobile state when window is resized
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
 
-  const fetchFactsData = async (speciesName) => {
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/speciesdata");
-      const result = await response.json();
-      const matchedFacts = result.find(
-        (item) => item.speciesName === speciesName
-      );
-      setFactsData(matchedFacts || null);
-    } catch (error) {
-      console.error("Error fetching facts data:", error);
-    }
-  };
-
-  const handleShowFactsToggle = () => {
-    setShowFacts((prev) => !prev);
-  };
-
-  const handleNextImage = () => {
-    if (speciesData.length > 0 && speciesData[0].images?.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % speciesData[0].images.length);
-    }
-  };
-
-  const handleSync = () => {
-    fetchSpeciesData();
-  };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDarkModeToggle = () => {
     setDarkMode((prev) => !prev);
@@ -76,6 +44,13 @@ function MainScreen() {
 
   const handleSidebarToggle = () => {
     setSidebarOpen((prev) => !prev);
+  };
+
+  const handleTabChange = (tab) => {
+    setSelectedTab(tab);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const renderContent = () => {
@@ -99,140 +74,103 @@ function MainScreen() {
     }
   };
 
+  const NavItem = ({ icon, label, tabName }) => (
+    <li
+      className={`flex items-center cursor-pointer rounded-md px-6 py-3 mb-1 transition-all duration-300 ${
+        selectedTab === tabName
+          ? darkMode
+            ? "bg-green text-white font-medium shadow-md" 
+            : "bg-green text-white font-medium shadow-sm"
+          : darkMode 
+            ? "text-gray-100 hover:bg-gray-700" 
+            : "text-gray-800 hover:bg-[#0a6e36] hover:text-white"
+      }`}
+      onClick={() => handleTabChange(tabName)}
+    >
+      {icon && <span className="mr-3 text-xl">{icon}</span>}
+      <span>{label}</span>
+    </li>
+  );
+  
+  // Width of the sidebar - used to calculate the margin of main content
+  const sidebarWidth = 250;
+  
   return (
-    <div className="relative h-screen w-screen transition-colors duration-500 overflow-auto z-0">
-      <div
-        className={`h-16 flex justify-between items-center pl-6 pr-2 text-2xl shadow transition-colors duration-500 ${
-          darkMode ? "bg-green text-light-green" : "bg-light-green text-green"
+    <div className={`relative h-screen w-screen transition-colors duration-500 overflow-hidden ${
+      darkMode ? "bg-gray-900 text-white" : "bg-[#f0f8f1] text-gray-900"
+    }`}>
+      {/* Header */}
+      <header
+        className={`h-16 flex justify-between items-center px-4 md:px-6 shadow-md z-10 transition-colors duration-500 ${
+          darkMode ? "bg-green text-light-green" : "bg-green text-white"
         }`}
       >
         <div className="flex items-center">
-          <FaBars
-            className="mr-6 cursor-pointer text-lg"
+          <button 
+            className="mr-4 p-2 rounded-full hover:bg-opacity-20 hover:bg-black transition-colors duration-300"
             onClick={handleSidebarToggle}
-          />
+            aria-label="Toggle sidebar"
+          >
+            {sidebarOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
+          </button>
           <div>
-            <div className="md:text-xl font-bold text-sm">
-              Invasive Species Identification
-            </div>
-            <div className="text-sm">Capstone Project</div>
+            <h1 className="text-lg md:text-xl font-bold truncate">Invasive Species Identification</h1>
+            <div className="text-xs md:text-sm opacity-80">Capstone Project</div>
           </div>
         </div>
-        <div className="flex items-center">
-          <button
-            className="px-4 py-2 rounded-md"
-            onClick={handleDarkModeToggle}
-          >
-            {darkMode ? (
-              <FaSun className="text-lg" />
-            ) : (
-              <FaMoon className="text-lg" />
-            )}
-          </button>
+        
+        <button
+          className="p-2 rounded-full hover:bg-opacity-20 hover:bg-black transition-colors duration-300"
+          onClick={handleDarkModeToggle}
+          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {darkMode ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
+        </button>
+      </header>
+
+      {/* Sidebar */}
+      <div 
+        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] bg-opacity-95 backdrop-blur-sm shadow-xl transition-all duration-300 ease-in-out z-30 ${
+          darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
+        } ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ width: `${sidebarWidth}px` }}
+      >
+        <div className="p-4">
+          <div className="flex flex-col space-y-1">
+            <NavItem icon={<FaHome />} label="Home" tabName="Home" />
+            <NavItem icon={<FaBug />} label="Species" tabName="Species" />
+            <NavItem icon={<FaClock />} label="Recent" tabName="Recent" />
+            <NavItem icon={<FaMap />} label="Map" tabName="Map" />
+            <NavItem icon={<FaArchive />} label="Archive" tabName="Archive" />
+            <NavItem icon={<FaCube />} label="Models" tabName="Models" />
+            <NavItem icon={<FaChartLine />} label="Graphs" tabName="Graph" />
+          </div>
         </div>
       </div>
 
-      <div
-        className={`fixed top-15 left-0 h-full bg-gray-200 ${
-          darkMode ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-800"
-        } shadow-lg transition-transform duration-500 z-50 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{ width: "18rem" }}
-      >
-        <ul className="space-y-6 p-2">
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Home"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Home")}
-          >
-            <FaHome className="mr-8 text-2xl" /> Home
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Species"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Species")}
-          >
-            <FaBug className="mr-8 text-2xl" /> Species
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Recent"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Recent")}
-          >
-            <FaClock className="mr-8 text-2xl" /> Recent
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Map"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Map")}
-          >
-            <FaMap className="mr-8 text-2xl" /> Map
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Archive"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Archive")}
-          >
-            <FaArchive className="mr-8 text-2xl" /> Archive
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Models"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Models")}
-          >
-            <FaCube className="mr-8 text-2xl" /> Models
-          </li>
-          <li
-            className={`flex items-center cursor-pointer ${
-              selectedTab === "Graph"
-                ? darkMode
-                  ? "bg-green text-light-green"
-                  : "bg-light-green text-green"
-                : ""
-            } rounded-md pl-10 py-2`}
-            onClick={() => setSelectedTab("Graph")}
-          >
-            <FaChartLine className="mr-8 text-2xl" /> Graphs
-          </li>
-        </ul>
-      </div>
-
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40" onClick={handleSidebarToggle}></div>
+      {/* Overlay for mobile */}
+      {sidebarOpen && isMobile && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20"
+          onClick={handleSidebarToggle}
+        ></div>
       )}
 
-      <div className="relative flex-grow z-0">{renderContent()}</div>
+      {/* Main content - adjust margin when sidebar is open on desktop */}
+      <main 
+        className={`relative h-[calc(100vh-4rem)] overflow-auto z-0 transition-all duration-300 ${
+          // Only add margin on desktop when sidebar is open
+          (sidebarOpen && !isMobile) ? `ml-[${sidebarWidth}px]` : 'ml-0'
+        }`}
+        style={{
+          // Use inline style to ensure exact pixel value is applied
+          marginLeft: (sidebarOpen && !isMobile) ? `${sidebarWidth}px` : '0'
+        }}
+      >
+        {renderContent()}
+      </main>
     </div>
   );
 }
