@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import { DarkModeContext } from "../context/DarkModeContext";
-import { FaTemperatureHigh, FaLightbulb, FaFire, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
+import { FaTemperatureHigh, FaLightbulb, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
 
 function Home() {
   const [speciesData, setSpeciesData] = useState([]);
@@ -49,7 +49,19 @@ function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const DataCard = ({ icon, title, value }) => (
+  // Helper function to safely format numeric values
+  const formatCoordinate = (value) => {
+    if (typeof value === 'number') {
+      return value.toFixed(2);
+    } else if (typeof value === 'string') {
+      // Try to convert string to number first
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num.toFixed(2);
+    }
+    return 'Unknown';
+  };
+
+  const DataCard = ({ icon, title, subtitle, value }) => (
     <div className={`flex items-center p-3 rounded-lg shadow-sm ${
       darkMode ? "bg-gray-700" : "bg-white"
     }`}>
@@ -60,10 +72,22 @@ function Home() {
       </div>
       <div>
         <p className="text-xs opacity-80">{title}</p>
+        {subtitle && <p className="text-xs opacity-60">{subtitle}</p>}
         <p className="font-medium">{value || "N/A"}</p>
       </div>
     </div>
   );
+
+  // Helper function to safely format location
+  const formatLocation = (lat, lng) => {
+    if (!lat || !lng) return "Unknown";
+    try {
+      return `${formatCoordinate(lat)}, ${formatCoordinate(lng)}`;
+    } catch (error) {
+      console.error("Error formatting location:", error);
+      return "Unknown";
+    }
+  };
 
   return (
     <div className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-auto ${
@@ -83,7 +107,7 @@ function Home() {
             <div className={`rounded-xl overflow-hidden shadow-lg transition-colors duration-500 h-full flex flex-col ${
               darkMode ? "bg-gray-700" : "bg-white"
             }`}>
-              <div className="p-4 border-b dark:border-gray-600">
+              <div className={`p-4 border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                 <h2 className="text-xl font-bold">
                   {loading 
                     ? "Loading..." 
@@ -97,7 +121,7 @@ function Home() {
                     darkMode ? "text-emerald-400" : "text-green-600"
                   }`}>
                     <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                      darkMode ? "bg-emerald-400" : "bg-green-500"
+                      darkMode ? "bg-emerald-400" : "bg-green-600"
                     }`}></span>
                     <span>Confidence: {speciesData[0]?.confidence}%</span>
                   </div>
@@ -132,7 +156,7 @@ function Home() {
               {/* Environmental data */}
               <div className="p-4 mt-auto">
                 <h3 className="font-medium mb-2">Environmental Data</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <DataCard 
                     icon={<FaTemperatureHigh />} 
                     title="Temperature" 
@@ -144,15 +168,11 @@ function Home() {
                     value={!loading && speciesData.length > 0 ? speciesData[0].light : "N/A"} 
                   />
                   <DataCard 
-                    icon={<FaFire />} 
-                    title="Heat" 
-                    value={!loading && speciesData.length > 0 ? speciesData[0].heat : "N/A"} 
-                  />
-                  <DataCard 
                     icon={<FaMapMarkerAlt />} 
                     title="Location" 
-                    value={!loading && speciesData.length > 0 && speciesData[0].latitude && speciesData[0].longitude ? 
-                      `${speciesData[0].latitude.toFixed(2)}, ${speciesData[0].longitude.toFixed(2)}` : 
+                    subtitle="(Longitude, Latitude)"
+                    value={!loading && speciesData.length > 0 ? 
+                      formatLocation(speciesData[0].latitude, speciesData[0].longitude) : 
                       "Unknown"} 
                   />
                 </div>
@@ -165,7 +185,7 @@ function Home() {
             <div className={`rounded-xl overflow-hidden shadow-lg h-full flex flex-col transition-colors duration-500 ${
               darkMode ? "bg-gray-700" : "bg-white"
             }`}>
-              <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center">
+              <div className={`p-4 border-b flex justify-between items-center ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                 <h2 className="text-xl font-bold">
                   {showFacts ? "Species Facts" : "Species Information"}
                 </h2>
@@ -174,7 +194,7 @@ function Home() {
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     darkMode
                       ? "bg-gray-600 hover:bg-gray-500"
-                      : "bg-gray-100 hover:bg-gray-200"
+                      : "bg-light-green hover:bg-green-200 text-green"
                   }`}
                 >
                   Show {showFacts ? "Info" : "Facts"}
