@@ -9,7 +9,7 @@ export const SpeciesCard = ({ species, onClick, onDelete, onArchive }) => {
       className={`card card-hover flex w-full p-4 border-l-4 ${
         darkMode 
           ? "bg-gray-700 border-green text-white" 
-          : "bg-white border-light-green text-gray-900"
+          : "bg-white border-green text-gray-900"
       }`}
       onClick={() => onClick(species)}
     >
@@ -90,6 +90,63 @@ export const SpeciesCard = ({ species, onClick, onDelete, onArchive }) => {
   );
 };
 
+export const InfoCard = ({ title, children, className = "" }) => {
+  const { darkMode } = useContext(DarkModeContext);
+  
+  return (
+    <div className={`card overflow-hidden h-full transition-colors duration-500 ${
+      darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"
+    } ${className}`}>
+      <div className={`p-3 border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+        <h2 className="text-lg font-bold">{title}</h2>
+      </div>
+      <div className="p-4">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export const ContentPanel = ({ title, children, className = "" }) => {
+  const { darkMode } = useContext(DarkModeContext);
+  
+  return (
+    <div className={`p-4 rounded-lg mb-4 ${
+      darkMode ? "bg-gray-800" : "bg-gray-100"
+    } ${className}`}>
+      {title && (
+        <h4 className="font-medium mb-2">{title}</h4>
+      )}
+      {children}
+    </div>
+  );
+};
+
+export const ModelCard = ({ title, icon, onClick, className = "" }) => {
+  const { darkMode } = useContext(DarkModeContext);
+  
+  return (
+    <button
+      className={`p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 text-center card card-hover ${
+        darkMode 
+          ? "bg-gray-700 hover:bg-gray-600 border border-gray-600" 
+          : "bg-white hover:bg-gray-100 border border-gray-200"
+      } ${className}`}
+      onClick={onClick}
+    >
+      <div className={`rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center ${
+        darkMode ? "bg-green text-white" : "bg-green text-white"
+      }`}>
+        {icon}
+      </div>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className={`text-xs mt-1 ${
+        darkMode ? "text-gray-400" : "text-gray-500"
+      }`}>View 3D Model</p>
+    </button>
+  );
+};
+
 export const SkeletonCard = () => {
   const { darkMode } = useContext(DarkModeContext);
   
@@ -107,4 +164,10 @@ export const SkeletonCard = () => {
   );
 };
 
-export default { SpeciesCard, SkeletonCard };
+export default { 
+  SpeciesCard, 
+  InfoCard, 
+  ContentPanel, 
+  ModelCard, 
+  SkeletonCard 
+};

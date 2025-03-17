@@ -29,6 +29,18 @@ const yellowMarker = new L.Icon({
 
 const placeholderImage = "https://via.placeholder.com/100?text=No+Image";
 
+// Helper function to safely format numeric values
+const formatCoordinate = (value) => {
+  if (typeof value === 'number') {
+    return value.toFixed(6);
+  } else if (typeof value === 'string') {
+    // Try to convert string to number first
+    const num = parseFloat(value);
+    return isNaN(num) ? value : num.toFixed(6);
+  }
+  return 'Unknown';
+};
+
 const SpeciesMarker = ({ position, name, image, icon, date }) => (
   <Marker position={position} icon={icon}>
     <Popup className="species-popup">
@@ -40,8 +52,8 @@ const SpeciesMarker = ({ position, name, image, icon, date }) => (
           className="my-2 w-28 h-28 border-2 border-gray-300 rounded-lg object-cover shadow-sm"
         />
         <div className="text-sm mt-1">
-          <div><strong>Latitude:</strong> {position[0].toFixed(6)}</div>
-          <div><strong>Longitude:</strong> {position[1].toFixed(6)}</div>
+          <div><strong>Latitude:</strong> {formatCoordinate(position[0])}</div>
+          <div><strong>Longitude:</strong> {formatCoordinate(position[1])}</div>
           {date && <div><strong>Date:</strong> {date}</div>}
         </div>
       </div>

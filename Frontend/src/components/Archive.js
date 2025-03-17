@@ -35,6 +35,7 @@ function Archive() {
 
   const closeModal = () => {
     setSelectedSpecies(null);
+    setDeleteModel(false);
   };
 
   const handleFilterChange = (e) => {
@@ -100,10 +101,45 @@ function Archive() {
     return () => clearInterval(interval);
   }, []);
 
+  // Use a simple custom delete modal instead of react-modal
+  const DeleteModal = ({ isOpen, species, onClose, onDelete }) => {
+    if (!isOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6 max-w-md mx-auto shadow-xl">
+          <h2 className="text-xl font-bold mb-4 text-center">Delete this species?</h2>
+          
+          <div className="bg-gray-100 p-4 rounded-lg mb-6">
+            <p className="text-center">
+              Are you sure you would like to delete this species from the database? This action is permanent and cannot be reversed.
+            </p>
+          </div>
+          
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => onDelete(species)}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md"
+            >
+              Yes, Delete
+            </button>
+            
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md"
+            >
+              No, Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-y-auto ${
-        darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+        darkMode ? "bg-gray-800 text-white" : "bg-gray-50 text-gray-900"
       }`}
     >
       <div className="w-full p-4">
@@ -172,7 +208,7 @@ function Archive() {
                           e.stopPropagation();
                           openDeleteModel(species);
                         }}
-                        className="mr-2 ml-2 z-10"
+                        className="mr-2 ml-2 z-10 cursor-pointer hover:text-red-500"
                       />
                     </div>
                   </div>
@@ -230,9 +266,6 @@ function Archive() {
               <strong>Light:</strong> {selectedSpecies.light || "N/A"}
             </p>
             <p>
-              <strong>Heat:</strong> {selectedSpecies.heat || "N/A"}
-            </p>
-            <p>
               <strong>Date:</strong> {selectedSpecies.date || "N/A"}
             </p>
             <p>
@@ -253,63 +286,15 @@ function Archive() {
           </div>
         </Modal>
       )}
-      {deleteModel && (
-        <Modal
-          isOpen={!!selectedSpecies}
-          onRequestClose={closeModal}
-          contentLabel="Species Details"
-          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 w-full sm:h-auto mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2 ${
-            darkMode
-              ? "bg-gray-800 text-gray-100 border-gray-600"
-              : "bg-white text-gray-900 border-gray-300"
-          }`}
-          overlayClassName="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center"
-        >
-          <div className="flex flex-col items-center space-y-6">
-            <h1
-              className={`text-xl font-bold text-center ${
-                darkMode ? "text-gray-100" : "text-gray-800"
-              }`}
-            >
-              Delete this species?
-            </h1>
-            <div
-              className={`w-full rounded-md p-4 flex items-center justify-center text-center ${
-                darkMode
-                  ? "bg-gray-700 text-gray-200"
-                  : "bg-gray-100 text-gray-700"
-              }`}
-            >
-              <p>
-                Are you sure you would like to delete this species from the
-                database? This action is permanent and cannot be reversed.
-              </p>
-            </div>
-            <div className="flex justify-center gap-4 w-full">
-              <button
-                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
-                  darkMode
-                    ? "bg-green-600 hover:bg-green-500 text-gray-100"
-                    : "bg-green-500 hover:bg-green-400 text-white"
-                }`}
-                onClick={() => handleDelete(selectedSpecies)}
-              >
-                Yes, Delete
-              </button>
-              <button
-                className={`px-6 py-2 rounded-md font-medium text-sm transition ${
-                  darkMode
-                    ? "bg-red-600 hover:bg-red-500 text-gray-100"
-                    : "bg-red-500 hover:bg-red-400 text-white"
-                }`}
-                onClick={closeModal}
-              >
-                No, Cancel
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      
+      {/* Custom delete modal that doesn't use react-modal */}
+      <DeleteModal 
+        isOpen={deleteModel}
+        species={selectedSpecies}
+        onClose={closeModal}
+        onDelete={handleDelete}
+      />
+      
       <ToastContainer />
     </div>
   );

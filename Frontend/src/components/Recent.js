@@ -4,8 +4,6 @@ import { DarkModeContext } from "../context/DarkModeContext";
 import { FaBox, FaTrash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { PrimaryButton, SecondaryButton, DangerButton } from "./Button";
-import { SpeciesCard, SkeletonCard } from "./Card";
 
 function Species() {
   const { darkMode } = useContext(DarkModeContext);
@@ -27,7 +25,6 @@ function Species() {
       }
     } catch (error) {
       console.error("Error fetching recent species data:", error);
-      toast.error("Failed to fetch species data");
     } finally {
       setLoading(false);
     }
@@ -78,6 +75,29 @@ function Species() {
     saveToArchives(species);
   };
 
+  // Helper function to safely format numeric values
+  const formatCoordinate = (value) => {
+    if (typeof value === 'number') {
+      return value.toFixed(6);
+    } else if (typeof value === 'string') {
+      // Try to convert string to number first
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num.toFixed(6);
+    }
+    return 'Unknown';
+  };
+
+  // Helper function to safely format location
+  const formatLocation = (lat, lng) => {
+    if (!lat || !lng) return "Unknown";
+    try {
+      return `${formatCoordinate(lat)}, ${formatCoordinate(lng)}`;
+    } catch (error) {
+      console.error("Error formatting location:", error);
+      return "Unknown";
+    }
+  };
+
   const saveToArchives = (species) => {
     deleteSpecies(species);
 
@@ -90,7 +110,6 @@ function Species() {
       image: species.image,
       temperature: species.temperature,
       light: species.light,
-      heat: species.heat,
       date: species.date,
       time: species.time,
       longitude: species.longitude,
@@ -110,14 +129,8 @@ function Species() {
         }
         return response.json();
       })
-      .then((data) => {
-        console.log("Data successfully archived:", data);
-        toast.success("Species successfully archived!");
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        toast.error("Failed to archive species");
-      });
+      .then((data) => console.log("Data successfully archived:", data))
+      .catch((error) => console.error("Error:", error));
   };
 
   const deleteSpecies = (species) => {
@@ -156,217 +169,253 @@ function Species() {
         fetchRecentSpecies();
       });
   };
-  
+
+  // Custom modal components
+  const DeleteConfirmModal = ({ isOpen, species, onClose, onDelete }) => {
+    if (!isOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6 max-w-md mx-auto shadow-xl">
+          <h2 className="text-xl font-bold mb-4 text-center">Delete this species?</h2>
+          
+          <div className="bg-gray-100 p-4 rounded-lg mb-6">
+            <p className="text-center">
+              Are you sure you would like to delete this species from the database? This action is permanent and cannot be reversed.
+            </p>
+          </div>
+          
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => onDelete(species)}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md"
+            >
+              Yes, Delete
+            </button>
+            
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md"
+            >
+              No, Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ArchiveConfirmModal = ({ isOpen, species, onClose, onArchive }) => {
+    if (!isOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6 max-w-md mx-auto shadow-xl">
+          <h2 className="text-xl font-bold mb-4 text-center">Archive Confirmation</h2>
+          
+          <div className="bg-gray-100 p-4 rounded-lg mb-6">
+            <p className="text-center">
+              Are you sure you would like to archive <strong>{species.name}</strong>?
+            </p>
+          </div>
+          
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => onArchive(species)}
+              className="bg-green text-white hover:bg-green-600 px-6 py-2 rounded-md"
+            >
+              Yes, Archive
+            </button>
+            
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
-      className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-y-auto fade-in ${
+      className={`flex flex-col items-center h-[calc(100vh-4rem)] w-full transition-colors duration-500 overflow-y-auto ${
         darkMode ? "bg-gray-800 text-white" : "bg-gray-50 text-gray-900"
       }`}
     >
-      <div className="w-full p-4 sticky top-0 z-10 backdrop-blur-sm">
+      <div className="w-full p-4">
         <input
           type="text"
           value={filterText}
           onChange={handleFilterChange}
-          placeholder="Filter by species name..."
-          className={`w-full p-3 rounded-lg shadow-sm border focus:outline-none focus:ring-2 transition-all ${
+          placeholder="Filter by species name"
+          className={`w-full p-3 rounded-md shadow-sm border focus:outline-none ${
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white focus:ring-green"
-              : "bg-white border-gray-300 text-black focus:ring-light-green"
+              ? "bg-gray-700 border-gray-600 text-white"
+              : "bg-gray-100 border-gray-300 text-black"
           }`}
         />
       </div>
-      
-      <div className="flex h-full w-full p-4 max-w-6xl mx-auto">
+      <div className="flex h-full w-full p-4">
         {loading ? (
-          <div className="flex flex-col w-full space-y-4">
-            {[1, 2, 3].map((i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
+          <p className="text-lg mx-auto">Loading recent species data...</p>
         ) : (
           <div className="flex flex-col w-full space-y-4">
-            {filteredSpeciesData.length > 0 ? (
-              filteredSpeciesData.map((species, index) => (
-                <div key={index} className="slide-in" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <SpeciesCard 
-                    species={species} 
-                    onClick={openModal}
-                    onArchive={openConfirmationModel}
-                    onDelete={openDeleteModel}
-                  />
+            {filteredSpeciesData.map((species, index) => (
+              <div
+                key={index}
+                className={`flex w-full p-4 rounded-lg shadow-md transition-colors duration-500 cursor-pointer border-2 ${
+                  darkMode
+                    ? "bg-gray-700 hover:bg-gray-600 border-gray-600"
+                    : "bg-white hover:bg-gray-100 border-gray-300"
+                }`}
+                onClick={() => openModal(species)}
+              >
+                <div className="flex w-full">
+                  <div className="flex justify-between w-full">
+                    <div className="flex items-center">
+                      <div className="w-32 h-32 bg-gray-300 rounded-md overflow-hidden">
+                        {species.image ? (
+                          <img
+                            src={`data:image/jpeg;base64,${species.image}`}
+                            alt={species.name}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <p
+                            className={`text-sm flex items-center justify-center h-full ${
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          >
+                            No Image
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col justify-center justify-self-start pl-4 ">
+                        <h2 className="text-lg font-bold">{species.name}</h2>
+                        <p className="text-sm">
+                          <strong>Discovered Time:</strong>{" "}
+                          {species.time || "N/A"}
+                        </p>
+                        <p className="text-sm">
+                          <strong>Discovered Date:</strong>{" "}
+                          {species.date || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <FaBox
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openConfirmationModel(species);
+                        }}
+                        className="mr-2 ml-2 z-10 cursor-pointer hover:text-green"
+                      />
+                      <FaTrash
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModel(species);
+                        }}
+                        className="mr-2 ml-2 z-10 cursor-pointer hover:text-red-500"
+                      />
+                    </div>
+                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center p-8">
-                <p className="text-xl font-medium mb-4">No species found</p>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Try adjusting your search filter or check back later
-                </p>
               </div>
-            )}
+            ))}
           </div>
         )}
       </div>
 
-      {/* Species Details Modal */}
+      {/* Modals */}
       {selectedSpecies && !confirmationModel && !deleteModel && (
         <Modal
           isOpen={!!selectedSpecies}
           onRequestClose={closeModal}
           contentLabel="Species Details"
-          className={`rounded-lg shadow-xl p-6 md:w-4/5 lg:w-3/5 xl:w-2/5 max-h-[90vh] mx-auto flex flex-col justify-between transition-all duration-500 custom-scrollbar border ${
+          className={`lg:rounded-lg shadow-lg p-6 xl:w-2/5 h-full sm:h-5/6 mx-auto flex flex-col justify-between transition-colors duration-500 custom-scrollbar border-2  ${
             darkMode
-              ? "bg-gray-800 text-white border-gray-600"
-              : "bg-white text-gray-900 border-gray-200"
+              ? "bg-gray-700 text-white border-white"
+              : "bg-white text-gray-900 border-black"
           }`}
-          overlayClassName="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 backdrop-blur-sm z-50"
+          overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
-          <div className="space-y-4 overflow-y-auto">
-            <div className="h-64 rounded-lg overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+          <div className="space-y-4">
+            <div className="h-64 rounded-md overflow-hidden flex items-center justify-center">
               {selectedSpecies.image ? (
                 <img
                   src={`data:image/jpeg;base64,${selectedSpecies.image}`}
                   alt={selectedSpecies.name}
-                  className="h-64 object-contain"
+                  className={`h-64 self-center rounded-xl border-2 ${
+                    darkMode ? "border-white" : "border-black"
+                  }`}
                 />
               ) : (
-                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                <p
+                  className={`text-sm flex items-center justify-center h-full ${
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
                   No Image
                 </p>
               )}
             </div>
-            
             <h2 className="text-2xl font-bold">{selectedSpecies.name}</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
-                <p><strong>Species:</strong> {selectedSpecies.scientific_name || "N/A"}</p>
-                <p><strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}</p>
-                <p><strong>Date:</strong> {selectedSpecies.date || "N/A"}</p>
-                <p><strong>Time:</strong> {selectedSpecies.time || "N/A"}</p>
-              </div>
-              
-              <div className={`p-4 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
-                <p><strong>Temperature:</strong> {selectedSpecies.temperature || "N/A"}</p>
-                <p><strong>Light:</strong> {selectedSpecies.light || "N/A"}</p>
-                <p><strong>Heat:</strong> {selectedSpecies.heat || "N/A"}</p>
-                {selectedSpecies.latitude && (
-                  <p><strong>Location:</strong> {selectedSpecies.latitude.toFixed(6)}, {selectedSpecies.longitude.toFixed(6)}</p>
-                )}
-              </div>
-            </div>
+            <p>
+              <strong>Species:</strong>{" "}
+              {selectedSpecies.scientific_name || "N/A"}
+            </p>
+            <p>
+              <strong>Habitat:</strong> {selectedSpecies.habitat || "N/A"}
+            </p>
+            <p>
+              <strong>Temperature:</strong>{" "}
+              {selectedSpecies.temperature || "N/A"}
+            </p>
+            <p>
+              <strong>Light:</strong> {selectedSpecies.light || "N/A"}
+            </p>
+            <p>
+              <strong>Date:</strong> {selectedSpecies.date || "N/A"}
+            </p>
+            <p>
+              <strong>Time:</strong> {selectedSpecies.time || "N/A"}
+            </p>
           </div>
-          
-          <div className="flex justify-end space-x-2 mt-6">
-            <PrimaryButton onClick={closeModal}>
+          <div className="flex justify-end">
+            <button
+              className={`px-4 py-2 rounded-md transition-colors duration-500 ${
+                darkMode
+                  ? "bg-green hover:bg-green-700 text-white"
+                  : "bg-light-green hover:bg-green-300 black-white"
+              }`}
+              onClick={closeModal}
+            >
               Close
-            </PrimaryButton>
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* Archive Confirmation Modal */}
-      {confirmationModel && (
-        <Modal
-          isOpen={!!selectedSpecies}
-          onRequestClose={closeModal}
-          contentLabel="Archive Confirmation"
-          className={`rounded-lg shadow-xl p-6 md:w-4/5 lg:w-3/5 xl:w-2/5 mx-auto flex flex-col justify-between transition-all duration-500 border ${
-            darkMode
-              ? "bg-gray-800 text-gray-100 border-gray-600"
-              : "bg-white text-gray-900 border-gray-200"
-          }`}
-          overlayClassName="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 backdrop-blur-sm z-50"
-        >
-          <div className="flex flex-col items-center space-y-6">
-            <h1 className={`text-xl font-bold text-center ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
-              Archive Confirmation
-            </h1>
-            
-            <div className={`w-full rounded-lg p-6 flex items-center justify-center text-center ${
-              darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-50 text-gray-700"
-            }`}>
-              <p>Are you sure you would like to archive <strong>{selectedSpecies.name}</strong>?</p>
-            </div>
-            
-            <div className="flex justify-center gap-4 w-full">
-              <PrimaryButton 
-                onClick={() => handleSaveToArchives(selectedSpecies)}
-                className="px-6"
-              >
-                Yes, Archive
-              </PrimaryButton>
-              
-              <SecondaryButton 
-                onClick={closeModal}
-                className="px-6"
-              >
-                Cancel
-              </SecondaryButton>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteModel && (
-        <Modal
-          isOpen={!!selectedSpecies}
-          onRequestClose={closeModal}
-          contentLabel="Delete Confirmation"
-          className={`rounded-lg shadow-xl p-6 md:w-4/5 lg:w-3/5 xl:w-2/5 mx-auto flex flex-col justify-between transition-all duration-500 border ${
-            darkMode
-              ? "bg-gray-800 text-gray-100 border-gray-600"
-              : "bg-white text-gray-900 border-gray-200"
-          }`}
-          overlayClassName="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 backdrop-blur-sm z-50"
-        >
-          <div className="flex flex-col items-center space-y-6">
-            <h1 className={`text-xl font-bold text-center ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
-              Delete Species
-            </h1>
-            
-            <div className={`w-full rounded-lg p-6 flex items-center justify-center text-center ${
-              darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-50 text-gray-700"
-            }`}>
-              <p>
-                Are you sure you would like to delete <strong>{selectedSpecies.name}</strong> from the
-                database? This action is permanent and cannot be reversed.
-              </p>
-            </div>
-            
-            <div className="flex justify-center gap-4 w-full">
-              <DangerButton 
-                onClick={() => handleDelete(selectedSpecies)}
-                className="px-6"
-              >
-                Yes, Delete
-              </DangerButton>
-              
-              <SecondaryButton 
-                onClick={closeModal}
-                className="px-6"
-              >
-                Cancel
-              </SecondaryButton>
-            </div>
-          </div>
-        </Modal>
-      )}
-      
-      <ToastContainer 
-        position="bottom-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={darkMode ? "dark" : "light"}
+      {/* Custom Archive Confirmation Modal */}
+      <ArchiveConfirmModal 
+        isOpen={confirmationModel}
+        species={selectedSpecies}
+        onClose={closeModal}
+        onArchive={handleSaveToArchives}
       />
+
+      {/* Custom Delete Confirmation Modal */}
+      <DeleteConfirmModal 
+        isOpen={deleteModel}
+        species={selectedSpecies}
+        onClose={closeModal}
+        onDelete={handleDelete}
+      />
+      
+      <ToastContainer />
     </div>
   );
 }
