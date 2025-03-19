@@ -386,8 +386,8 @@ def save_to_db(species_name, image_path, confidence):
     Latitude = 0
     Longitude = 0
 
-    data = read_serial_data(port='/dev/ttyUSB2', baudrate=9600)
-    time.sleep(3)
+    data = read_serial_data(port='/dev/ttyUSB0', baudrate=9600)
+    time.sleep(2)
     if data:
         try:
         # Split the data into Longitude, Latitude, Temp, and Light
