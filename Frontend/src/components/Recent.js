@@ -77,12 +77,12 @@ function Species() {
 
   // Helper function to safely format numeric values
   const formatCoordinate = (value) => {
-    if (typeof value === 'number') {
+    if (typeof value === 'number' && isFinite(value) && !isNaN(value)) {
       return value.toFixed(6);
     } else if (typeof value === 'string') {
       // Try to convert string to number first
       const num = parseFloat(value);
-      return isNaN(num) ? value : num.toFixed(6);
+      return !isNaN(num) && isFinite(num) ? num.toFixed(6) : 'Invalid';
     }
     return 'Unknown';
   };
@@ -91,10 +91,16 @@ function Species() {
   const formatLocation = (lat, lng) => {
     if (!lat || !lng) return "Unknown";
     try {
+      // Additional validation to ensure coordinates are valid
+      const validLat = typeof lat === 'number' || !isNaN(parseFloat(lat));
+      const validLng = typeof lng === 'number' || !isNaN(parseFloat(lng));
+      
+      if (!validLat || !validLng) return "Invalid coordinates";
+      
       return `${formatCoordinate(lat)}, ${formatCoordinate(lng)}`;
     } catch (error) {
       console.error("Error formatting location:", error);
-      return "Unknown";
+      return "Error";
     }
   };
 

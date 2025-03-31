@@ -6,6 +6,12 @@ import "leaflet.heat";
 import { FaMapMarkedAlt, FaFireAlt, FaLayerGroup, FaInfoCircle } from "react-icons/fa";
 import { DarkModeContext } from "../context/DarkModeContext";
 
+// Add this utility function at the top of the file, before any components
+const isValidCoordinate = (value) => {
+  // Check if value is a valid number and within reasonable latitude/longitude range
+  return typeof value === 'number' && !isNaN(value) && isFinite(value);
+};
+
 // Create custom markers with improved styling
 const blueMarker = new L.Icon({
   iconUrl: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
@@ -41,30 +47,41 @@ const formatCoordinate = (value) => {
   return 'Unknown';
 };
 
-const SpeciesMarker = ({ position, name, image, icon, date }) => (
-  <Marker position={position} icon={icon}>
-    <Popup className="species-popup">
-      <div className="text-center items-center flex-col flex">
-        <strong className="text-lg">{name}</strong>
-        <img
-          src={image || placeholderImage}
-          alt={name}
-          className="my-2 w-28 h-28 border-2 border-gray-300 rounded-lg object-cover shadow-sm"
-        />
-        <div className="text-sm mt-1">
-          <div><strong>Latitude:</strong> {formatCoordinate(position[0])}</div>
-          <div><strong>Longitude:</strong> {formatCoordinate(position[1])}</div>
-          {date && <div><strong>Date:</strong> {date}</div>}
+const SpeciesMarker = ({ position, name, image, icon, date }) => {
+  // Validate coordinates before creating the marker
+  if (!position || !isValidCoordinate(position[0]) || !isValidCoordinate(position[1])) {
+    console.error("Invalid coordinates:", position);
+    return null; // Don't render the marker if coordinates are invalid
+  }
+
+  return (
+    <Marker position={position} icon={icon}>
+      <Popup className="species-popup">
+        <div className="text-center items-center flex-col flex">
+          <strong className="text-lg">{name}</strong>
+          <img
+            src={image || placeholderImage}
+            alt={name}
+            className="my-2 w-28 h-28 border-2 border-gray-300 rounded-lg object-cover shadow-sm"
+          />
+          <div className="text-sm mt-1">
+            <div><strong>Latitude:</strong> {formatCoordinate(position[0])}</div>
+            <div><strong>Longitude:</strong> {formatCoordinate(position[1])}</div>
+            {date && <div><strong>Date:</strong> {date}</div>}
+          </div>
         </div>
-      </div>
-    </Popup>
-  </Marker>
-);
+      </Popup>
+    </Marker>
+  );
+};
 
 const RecenterMap = ({ position }) => {
   const map = useMap();
   useEffect(() => {
-    if (position) map.setView(position, 14, { animate: true });
+    // Validate position before trying to center the map
+    if (position && isValidCoordinate(position[0]) && isValidCoordinate(position[1])) {
+      map.setView(position, 14, { animate: true });
+    }
   }, [position, map]);
   return null;
 };
@@ -74,8 +91,19 @@ const HeatmapLayer = ({ data }) => {
   useEffect(() => {
     if (!map || data.length === 0) return;
 
+    // Filter out invalid coordinates
+    const validData = data.filter(location => 
+      isValidCoordinate(location.latitude) && 
+      isValidCoordinate(location.longitude)
+    );
+
+    if (validData.length === 0) {
+      console.warn("No valid coordinates for heatmap");
+      return;
+    }
+
     const heatLayer = L.heatLayer(
-      data.map((location) => [
+      validData.map((location) => [
         location.latitude,
         location.longitude,
         location.intensity || 0.2,

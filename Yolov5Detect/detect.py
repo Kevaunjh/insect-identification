@@ -1,62 +1,48 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 """
 Run YOLOv5 detection inference on images, videos, directories, globs, YouTube, webcam, streams, etc.
-
-Usage - sources:
-    $ python detect.py --weights yolov5s.pt --source 0                               # webcam
-                                                     img.jpg                         # image
-                                                     vid.mp4                         # video
-                                                     screen                          # screenshot
-                                                     path/                           # directory
-                                                     list.txt                        # list of images
-                                                     list.streams                    # list of streams
-                                                     'path/*.jpg'                    # glob
-                                                     'https://youtu.be/LNwODJXcvt4'  # YouTube
-                                                     'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP stream
-
-Usage - formats:
-    $ python detect.py --weights yolov5s.pt                 # PyTorch
-                                 yolov5s.torchscript        # TorchScript
-                                 yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                                 yolov5s_openvino_model     # OpenVINO
-                                 yolov5s.engine             # TensorRT
-                                 yolov5s.mlpackage          # CoreML (macOS-only)
-                                 yolov5s_saved_model        # TensorFlow SavedModel
-                                 yolov5s.pb                 # TensorFlow GraphDef
-                                 yolov5s.tflite             # TensorFlow Lite
-                                 yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
-                                 yolov5s_paddle_model       # PaddlePaddle
 """
 
 import argparse
 import csv
-from datetime import datetime
+import datetime
 import os
 import platform
 import sys
-from pathlib import Path
-import base64
-import random
-import requests
-import torch
-import requests
-import json
+import threading
 import time
-import pathlib
-import threading  # added import
-pathlib.WindowsPath = pathlib.PosixPath
+import traceback
+from pathlib import Path
 
+# Scientific and data processing libraries
+import base64
+import json
+import random
 
-justConnected = False
+# Machine learning and computer vision
+import torch
+import cv2
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]  # YOLOv5 root directory
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+# MongoDB and Serial Communication
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from serial_port_manager import SerialPortManager
 
-from ultralytics.utils.plotting import Annotator, colors, save_one_box
+# Rover Control
+from Rosmaster_Lib import Rosmaster
 
+# Configuration
+from config import (
+    ROOT, 
+    MIN_CONFIDENCE, 
+    SPECIES_MAPPING, 
+    DB_URI, 
+    DB_NAME, 
+    DB_COLLECTION, 
+    OFFLINE_DATA_FILE
+)
+
+# Ultralytics YOLOv5 imports
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
 from utils.general import (
@@ -65,9 +51,7 @@ from utils.general import (
     check_file,
     check_img_size,
     check_imshow,
-    check_requirements,
     colorstr,
-    cv2,
     increment_path,
     non_max_suppression,
     print_args,
@@ -75,83 +59,120 @@ from utils.general import (
     strip_optimizer,
     xyxy2xywh,
 )
+from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-
-
-Species_Path = "/holding_species.json"
-if os.path.exists(Species_Path):
-    with open(Species_Path, "r") as file:
-        try:
-            holding_species = json.load(file)
-            print("Loaded holding species from local storage.")
-        except json.JSONDecodeError:
-            holding_species = []
-            print("Error loading holding species from local storage. Using empty list.")
-else:
-    holding_species = []
-        
-    
-
-import json
-import os
-import base64
-import random
-from datetime import datetime
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi  
-from Rosmaster_Lib import Rosmaster
-import time
-rover = Rosmaster()
-import os
-import json
-import random
-import base64
-import datetime
-from PiConnect import read_serial_data
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-
-MIN_CONFIDENCE = 80  # Set minimum confidence threshold
+# Global Variables
 PauseVariable = 0
 distance = 0
 start = 0
-# Online/Offline Data Handling:
-# 1. Check if internet is available (only run once at the start)
-# 2. If internet is available, save to MongoDB and clear local JSON file
-# 3. If internet is not available, nothing is saved to MongoDB
-# 4. Run detection on images (run continuously with each detection)
-# 5. If internet is available, upload local files to MongoDB and save images to DB every 10 seconds
-# 6. If internet is not available, save images to local JSON file every 10 seconds
-    
-def stop_moving():
-    rover.set_car_motion(0.0, 0, 0)
+justConnected = False
 
+# Rover Initialization
+rover = Rosmaster()
+
+# Serial Port Manager
+port_manager = SerialPortManager()
+
+def check_requirements(requirements_path=None, exclude=None):
+    """
+    Check and install requirements.
+    
+    Args:
+        requirements_path (Path, optional): Path to requirements file
+        exclude (tuple, optional): Packages to exclude from checking
+    """
+    # Potential paths for requirements file
+    potential_paths = [
+        Path.cwd() / 'requirements.txt',
+        Path(__file__).parent / 'requirements.txt',
+        Path(__file__).parent.parent / 'requirements.txt'
+    ]
+    
+    # Find the first existing requirements file
+    if requirements_path is None:
+        requirements_path = next((path for path in potential_paths if path.exists()), None)
+    
+    # Print debugging information
+    if requirements_path:
+        print(f"Checking requirements at: {requirements_path}")
+        # Add any specific requirement checking logic here if needed
+    else:
+        print("No requirements.txt file found.")
+        print("Potential paths checked:")
+        for path in potential_paths:
+            print(f"  - {path}")
+
+def stop_moving():
+    """Stop rover motion."""
+    try:
+        rover.set_car_motion(0.0, 0, 0)
+    except Exception as e:
+        print(f"Error stopping rover: {e}")
+
+def reset_arm_position():
+    """Reset rover arm to default position."""
+    try:
+        rover.set_uart_servo_angle(6, 90, 5000)
+        time.sleep(0.05)
+        rover.set_uart_servo_angle(5, 90, 5000)
+        time.sleep(0.05)
+        rover.set_uart_servo_angle(4, 0, 5000)
+        time.sleep(0.05)
+        rover.set_uart_servo_angle(3, 20, 5000)
+        time.sleep(0.05)
+        rover.set_uart_servo_angle(2, 90, 5000)
+        time.sleep(0.05)
+        rover.set_uart_servo_angle(1, 90, 5000)
+        time.sleep(0.05)
+    except Exception as e:
+        print(f"Error resetting arm position: {e}")
+
+def safe_serial_read():
+    """
+    Safely read serial data using the SerialPortManager.
+    
+    Returns:
+        dict: Parsed serial data or None if reading fails
+    """
+    def serial_operation(ser):
+        from serial_port_manager import read_serial_data
+        return read_serial_data(ser)
+    
+    try:
+        return port_manager.manage_port_access(serial_operation)
+    except Exception as e:
+        print(f"Error in safe serial read: {e}")
+        traceback.print_exc()
+        return None
+
+def internet_on():
+    """Check if the internet is available."""
+    try:
+        import socket
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
 
 def startup():
     """Check internet connection and upload any offline data to MongoDB."""
-    json_file = "holding_species.json"
     if internet_on():
         print("Internet available. Uploading data to MongoDB...")
-
-        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
-        client = MongoClient(uri, server_api=ServerApi('1'))
-        db = client["insect_identification"]
-        collection = db["species"]
-
+        
         try:
+            client = MongoClient(DB_URI, server_api=ServerApi('1'))
             client.admin.command('ping')
             print("Connected to MongoDB!")
 
-      
-            if os.path.exists(json_file):
-                with open(json_file, "r") as file:
+            db = client[DB_NAME]
+            collection = db[DB_COLLECTION]
+
+            if os.path.exists(OFFLINE_DATA_FILE):
+                with open(OFFLINE_DATA_FILE, "r") as file:
                     try:
                         offline_data = json.load(file)
-                        if not isinstance(offline_data, list):
-                            offline_data = [offline_data]
+                        offline_data = offline_data if isinstance(offline_data, list) else [offline_data]
                     except json.JSONDecodeError:
                         offline_data = []
 
@@ -165,50 +186,83 @@ def startup():
                         print(f"Uploaded offline record: {record['name']} ({record['scientific_name']})")
 
                     except FileNotFoundError:
-                        print(f"Error: File not found at {record['image']}. Skipping.")
+                        print(f"Error: File not found at {record.get('image', 'Unknown path')}. Skipping.")
                     except Exception as e:
                         print(f"Error uploading offline record: {e}")
 
-          
-                os.remove(json_file)
+                # Remove the file after successful upload
+                os.remove(OFFLINE_DATA_FILE)
                 print("Offline data successfully uploaded and cleared.")
                        
         except Exception as e:
             print(f"Error saving to MongoDB: {e}")
+
+def move_towards():
+    """Move rover towards detected object."""
+    global distance
+    movingdistance = distance * 2
+    print("Moving forwards")
+    rover.set_car_motion(0.2, 0, 0)
+    time.sleep(movingdistance)
+    rover.set_car_motion(0.0, 0, 0)
+    print("Stopping")
+
+def move_away():
+    """Move rover away from detected object."""
+    global distance
+    movingdistance = distance * 2
+    print("Moving Backwards")
+    rover.set_car_motion(-0.2, 0, 0)
+    time.sleep(movingdistance)
+    rover.set_car_motion(0.0, 0, 0)
+    print("Stopping")
+
+def arm_point():
+    """Position rover arm to point."""
+    rover.set_uart_servo_angle(6, 90, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(5, 90, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(4, 67, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(3, 80, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(2, 40, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(1, 90, 5000)
+    time.sleep(5)
+
+def arm_follow_tape():
+    """Reset arm to follow tape."""
+    global PauseVariable
+    rover.set_uart_servo_angle(6, 90, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(5, 90, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(4, 0, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(3, 20, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(2, 90, 5000)
+    time.sleep(0.05)
+    rover.set_uart_servo_angle(1, 90, 5000)
+    time.sleep(0.05)
     
-        
-
-def internet_on():
-    """Check if the internet is available by attempting to connect to Google."""
-    try:
-        import socket
-        socket.create_connection(("8.8.8.8", 53), timeout=3)
-        return True
-    except OSError:
-        return False
-
-def reset_arm_position():
-        rover.set_uart_servo_angle(6, 90, 5000)
-        time.sleep(0.05)
-        rover.set_uart_servo_angle(5, 90, 5000)
-        time.sleep(0.05)
-        rover.set_uart_servo_angle(4, 0, 5000)
-        time.sleep(0.05)
-        rover.set_uart_servo_angle(3, 20, 5000)
-        time.sleep(0.05)
-        rover.set_uart_servo_angle(2, 90, 5000)
-        time.sleep(0.05)
-        rover.set_uart_servo_angle(1, 90, 5000)
-        time.sleep(0.05)
-
-
+    PauseVariable = 0
+    print("FINISHED", flush=True)
 
 def run_led_daemon(species_name):
+    """Run LED indicator in a separate thread."""
     led_thread = threading.Thread(target=display_led, args=(species_name,), daemon=True)
     led_thread.start()
 
 def display_led(species_name):
-
+    """
+    Display LED indicators based on species risk level.
+    
+    Args:
+        species_name (str): Name of the detected species
+    """
     species_risk = {
         "Box Tree Moth": 2,
         "Northern Hornet": 1,
@@ -230,6 +284,8 @@ def display_led(species_name):
 
     risk_level = species_risk.get(species_name, 0)
     rover.set_car_motion(0,0,0)
+    
+    # LED and Beep Logic based on risk level
     if risk_level == 2:
         for x in range(0,15,1):
             rover.set_colorful_lamps(x, 255, 0, 0)
@@ -238,7 +294,6 @@ def display_led(species_name):
                 rover.set_beep(1)
                 time.sleep(0.5)
                 rover.set_beep(0)
-
     elif risk_level == 1:
         for x in range(0,15,1):
             rover.set_colorful_lamps(x, 255, 255, 0)
@@ -247,8 +302,6 @@ def display_led(species_name):
             rover.set_beep(1)
             time.sleep(0.5)
             rover.set_beep(0)
-
-
     else:
         for x in range(0,15,1):
             rover.set_colorful_lamps(x, 0, 255, 0)
@@ -257,11 +310,12 @@ def display_led(species_name):
         time.sleep(0.5)
         rover.set_beep(0)
 
-
+    # Reset LED
     time.sleep(0.05)
     for x in range(0,15,1):
         rover.set_colorful_lamps(x, 0, 0, 0)
         time.sleep(0.05)
+    
     time.sleep(1)
     move_towards()
     time.sleep(2)
@@ -272,219 +326,143 @@ def display_led(species_name):
     arm_follow_tape()
     time.sleep(10)
     
-    
     sys.exit(0)
 
-def arm_point():
-    rover.set_uart_servo_angle(6, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(5, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(4, 67, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(3, 80, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(2, 40, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(1, 90, 5000)
-    time.sleep(5)
+def save_to_db(species_name, image_path, confidence):
+    """
+    Save detected species information to MongoDB or local JSON.
+    
+    Args:
+        species_name (str): Name of the detected species
+        image_path (str): Path to the image
+        confidence (float): Detection confidence
+    """
+    global justConnected, PauseVariable, distance
 
+    # Confidence validation
+    confidence = round(confidence * 100, 2)
+    if confidence < MIN_CONFIDENCE:
+        print(f"Detection skipped: {species_name} ({confidence}%) below confidence threshold ({MIN_CONFIDENCE}%)")
+        return
 
+    # Skip specific species if needed
+    if species_name.lower() == "spotted lanternfly":
+        return
 
-def arm_follow_tape():
-    rover.set_uart_servo_angle(6, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(5, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(4, 0, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(3, 20, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(2, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(1, 90, 5000)
-    time.sleep(0.05)
-    global PauseVariable
-    PauseVariable = 0
-    print("FINISHED", flush=True)
+    print("LOCATED", flush=True)
 
-def move_towards():
-    global distance
-    movingdistance = distance * 2
-    print("Moving fowards")
-    rover.set_car_motion(0.2, 0, 0)
-    time.sleep(movingdistance)
-    rover.set_car_motion(0.0, 0, 0)
-    print("Stopping")
+    # Get scientific name
+    scientific_name = SPECIES_MAPPING.get(species_name.lower(), "Unknown species")
+    
+    # Current timestamp
+    now = datetime.datetime.now()
+    current_date = now.strftime("%Y-%m-%d")
+    current_time = now.strftime("%H:%M:%S")
 
+    # Initialize sensor data
+    sensor_data = {
+        'longitude': 0,
+        'latitude': 0,
+        'temperature': 0,
+        'light': 0
+    }
 
-def move_away():
-    global distance
-    movingdistance = distance * 2
-    print("Moving Backwards")
-    rover.set_car_motion(-0.2, 0, 0)
-    time.sleep(movingdistance)
-    rover.set_car_motion(0.0, 0, 0)
-    print("Stopping")
+    # Safely read serial data
+    serial_reading = safe_serial_read()
+    if serial_reading:
+        sensor_data.update(serial_reading)
+        print(f"Sensor Data: {sensor_data}")
 
-# New function to check wifi connection repeatedly in a background thread
-def check_wifi():
+    # Prepare data for storage
+    data = {
+        "name": species_name,
+        "scientific_name": scientific_name,
+        "temperature": sensor_data['temperature'],
+        "light": sensor_data['light'],
+        "image": image_path, 
+        "latitude": sensor_data['latitude'],
+        "longitude": sensor_data['longitude'],
+        "confidence": confidence,
+        "date": current_date,
+        "time": current_time,
+    }
+
+    # Pause and prepare for LED/movement sequence
+    PauseVariable = 1
+    rover.set_car_motion(0,0,0)
+    run_led_daemon(species_name)
+
+    # Wait for LED sequence to complete
+    while PauseVariable == 1:
+        time.sleep(1)
+
+    # Offline/Online data handling
+    if not internet_on():
+        print("No internet. Saving data locally.")
+        
+        # Read existing local data
+        existing_data = []
+        if os.path.exists(OFFLINE_DATA_FILE):
+            try:
+                with open(OFFLINE_DATA_FILE, "r") as file:
+                    existing_data = json.load(file)
+                    existing_data = existing_data if isinstance(existing_data, list) else [existing_data]
+            except json.JSONDecodeError:
+                existing_data = []
+
+        # Add new data and save
+        existing_data.append(data)
+        with open(OFFLINE_DATA_FILE, "w") as file:
+            json.dump(existing_data, file, indent=4)
+
+        print(f"Data saved locally: {species_name} ({scientific_name})")
+        
+    else:
+        # Online data handling
+        try:
+            client = MongoClient(DB_URI, server_api=ServerApi('1'))
+            db = client[DB_NAME]
+            collection = db[DB_COLLECTION]
+
+            print(f"Uploading {species_name}...")
+            with open(image_path, "rb") as img_file:
+                data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
+                collection.insert_one(data)
+                print(f"Uploaded new entry: {species_name} ({scientific_name})")
+        
+        except Exception as e:
+            print(f"Error uploading to MongoDB: {e}")
+            # Fallback to local storage if MongoDB upload fails
+            existing_data = []
+            if os.path.exists(OFFLINE_DATA_FILE):
+                try:
+                    with open(OFFLINE_DATA_FILE, "r") as file:
+                        existing_data = json.load(file)
+                        existing_data = existing_data if isinstance(existing_data, list) else [existing_data]
+                except json.JSONDecodeError:
+                    existing_data = []
+
+            existing_data.append(data)
+            with open(OFFLINE_DATA_FILE, "w") as file:
+                json.dump(existing_data, file, indent=4)
+            print(f"Saved data locally due to MongoDB error: {species_name} ({scientific_name})")
+
+    # Reset global variables
+    global start
+    start = 0
+
+def check_wifi_thread():
+    """Background thread to check wifi connection."""
     while True:
         if not internet_on():
             print("No internet connection. Running startup check...")
             startup()
         time.sleep(50)
 
-def save_to_db(species_name, image_path, confidence):
-    """Save detected specieis information to MongoDB or local JSON based on internet availability."""
-    global justConnected
-    global PauseVariable
-    species_mapping = {
-        "box tree moth": "Cydalima perspectalis",
-        "northern hornet": "Vespa crabro",
-        "spotted lanternfly": "Lycorma delicatula",
-        "japanese beetle": "Popillia japonica",
-        "stink bugs": "Pentatomidae",
-        "ant": "Formicidae",
-        "bumble bee": "Bombus",
-        "ladybug": "Coccinellidae",
-        "monarch butterfly": "Danaus plexippus",
-        "wolf spider": "Lycosidae",
-        "creeping thistle": "Cirsium arvense",
-        "himalayan balsam": "Impatiens glandulifera",
-        "japanese knotweed": "Reynoutria japonica",
-        "leafy ispurge": "Euphorbia esula",
-        "purple loosestrife": "Lythrum salicaria",
-        "common lilac": "Syringa vulgaris",
-        "common milkweed": "Asclepias syriaca",
-        "common yarrow": "Achillea millefolium",
-        "red osier dogwood": "Cornus sericea",
-        "staghorn sumac": "Rhus typhina",
-    }
-
-
-
-    confidence = round(confidence * 100, 2)
-    if confidence < MIN_CONFIDENCE:
-        print(f"Detection skipped: {species_name} ({confidence}%) below confidence threshold ({MIN_CONFIDENCE}%)")
-        return
-
-    if species_name == "Spotted Lanternfly":
-        return
-
-
-    print("LOCATED", flush=True)
-
-
-    scientific_name = species_mapping.get(species_name.lower(), "Unknown species")
-    now = datetime.datetime.now()
-    current_date = now.strftime("%Y-%m-%d")
-    current_time = now.strftime("%H:%M:%S")
-
-    Temp = 0
-    Light = 0
-    Latitude = 0
-    Longitude = 0
-
-    data = read_serial_data(port='/dev/ttyUSB2', baudrate=9600)
-    time.sleep(3)
-    if data:
-        try:
-        # Split the data into Longitude, Latitude, Temp, and Light
-            longitude, latitude, temp, light = data.split(', ')
-
-        # Assign values to variables
-            Longitude = longitude
-            Latitude = latitude
-            Temp = temp
-            Light = light
-
-        # Print the categorized data
-            print(f"Longitude: {Longitude}, Latitude: {Latitude}, Temp: {Temp}, Light: {Light}")
-
-        except ValueError:
-            print("Error: Received data format is incorrect.")
-    else:
-        print("No data received.")
-
-    data = {
-        "name": species_name,
-        "scientific_name": scientific_name,
-        "temperature": Temp,
-        "light": Light,
-        "image": image_path, 
-        "latitude": Latitude,
-        "longitude": Longitude,
-        "confidence": confidence,
-        "date": current_date,
-        "time": current_time,
-    }
-    PauseVariable = 1
-    global distance
-    json_file = "holding_species.json"
-    rover.set_car_motion(0,0,0)
-    run_led_daemon(species_name)
-    while PauseVariable == 1:
-            time.sleep(1)
-    if not internet_on():
-        print("No internet. Saving data locally.")
-        justConnected = False
-        if os.path.exists(json_file):
-            with open(json_file, "r") as file:
-                try:
-                    existing_data = json.load(file)
-                    if not isinstance(existing_data, list):
-                            existing_data = [existing_data]
-                except json.JSONDecodeError:
-                        existing_data = []
-        else:
-            existing_data = []
-
-        existing_data.append(data)
-        with open(json_file, "w") as file:
-            json.dump(existing_data, file, indent=4)
-
-        print(f"Data saved locally: {species_name} ({scientific_name})")
-        
-    elif not justConnected:
-        startup()
-        justConnected = True
-        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
-        client = MongoClient(uri, server_api=ServerApi('1'))
-        db = client["insect_identification"]
-        collection = db["species"]
-        print(f"Uploading {species_name}...")
-        with open(image_path, "rb") as img_file:
-            data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
-            collection.insert_one(data)
-            print(f"Uploaded new entry: {species_name} ({scientific_name})")
-        
-    else:
-        uri = "mongodb+srv://Admin:321321@insectidentificationdb.dsfkh.mongodb.net/?retryWrites=true&w=majority&appName=InsectIdentificationDB"
-        client = MongoClient(uri, server_api=ServerApi('1'))
-        db = client["insect_identification"]
-        collection = db["species"]
-        print(f"Uploading {species_name}...")
-        with open(image_path, "rb") as img_file:
-            data["image"] = base64.b64encode(img_file.read()).decode("utf-8")
-            collection.insert_one(data)
-            print(f"Uploaded new entry: {species_name} ({scientific_name})")
-    global start
-    start = 0
-
-    
-
-
-            
- 
-
-
-    
 @smart_inference_mode()
 def run(
     weights=ROOT / "yolov5s.pt",  # model path or triton URL
     source=ROOT / "data/images",  # file/dir/URL/glob/screen/0(webcam)
-    pathcam=ROOT / "data/pathcam",
     data=ROOT / "data/coco128.yaml",  # dataset.yaml path
     imgsz=(640, 640),  # inference size (height, width)
     conf_thres=0.25,  # confidence threshold
@@ -493,7 +471,7 @@ def run(
     device="",  # cuda device, i.e. 0 or 0,1,2,3 or cpu
     view_img=False,  # show results
     save_txt=False,  # save results to *.txt
-    save_format=0,  # save boxes coordinates in YOLO format or Pascal-VOC format (0 for YOLO and 1 for Pascal-VOC)
+    save_format=0,  # save boxes coordinates in YOLO format or Pascal-VOC format
     save_csv=False,  # save results in CSV format
     save_conf=False,  # save confidences in --save-txt labels
     save_crop=False,  # save cropped prediction boxes
@@ -514,55 +492,18 @@ def run(
     vid_stride=1,  # video frame-rate stride
 ):
     """
-    Runs YOLOv5 detection inference on various sources like images, videos, directories, streams, etc.
-
+    Run YOLOv5 detection inference on various sources.
+    
     Args:
-        weights (str | Path): Path to the model weights file or a Triton URL. Default is 'yolov5s.pt'.
-        source (str | Path): Input source, which can be a file, directory, URL, glob pattern, screen capture, or webcam
-            index. Default is 'data/images'.
-        data (str | Path): Path to the dataset YAML file. Default is 'data/coco128.yaml'.
-        imgsz (tuple[int, int]): Inference image size as a tuple (height, width). Default is (640, 640).
-        conf_thres (float): Confidence threshold for detections. Default is 0.25.
-        iou_thres (float): Intersection Over Union (IOU) threshold for non-max suppression. Default is 0.45.
-        max_det (int): Maximum number of detections per image. Default is 1000.
-        device (str): CUDA device identifier (e.g., '0' or '0,1,2,3') or 'cpu'. Default is an empty string, which uses the
-            best available device.
-        view_img (bool): If True, display inference results using OpenCV. Default is False.
-        save_txt (bool): If True, save results in a text file. Default is False.
-        save_csv (bool): If True, save results in a CSV file. Default is False.
-        save_conf (bool): If True, include confidence scores in the saved results. Default is False.
-        save_crop (bool): If True, save cropped prediction boxes. Default is False.
-        nosave (bool): If True, do not save inference images or videos. Default is False.
-        classes (list[int]): List of class indices to filter detections by. Default is None.
-        agnostic_nms (bool): If True, perform class-agnostic non-max suppression. Default is False.
-        augment (bool): If True, use augmented inference. Default is False.
-        visualize (bool): If True, visualize feature maps. Default is False.
-        update (bool): If True, update all models' weights. Default is False.
-        project (str | Path): Directory to save results. Default is 'runs/detect'.
-        name (str): Name of the current experiment; used to create a subdirectory within 'project'. Default is 'exp'.
-        exist_ok (bool): If True, existing directories with the same name are reused instead of being incremented. Default is
-            False.
-        line_thickness (int): Thickness of bounding box lines in pixels. Default is 3.
-        hide_labels (bool): If True, do not display labels on bounding boxes. Default is False.
-        hide_conf (bool): If True, do not display confidence scores on bounding boxes. Default is False.
-        half (bool): If True, use FP16 half-precision inference. Default is False.
-        dnn (bool): If True, use OpenCV DNN backend for ONNX inference. Default is False.
-        vid_stride (int): Stride for processing video frames, to skip frames between processing. Default is 1.
-
+        (multiple arguments as defined in the function signature)
+    
     Returns:
         None
-
-    Examples:
-        ```python
-        from ultralytics import run
-
-        # Run inference on an image
-        run(source='data/images/example.jpg', weights='yolov5s.pt', device='0')
-
-        # Run inference on a video with specific confidence threshold
-        run(source='data/videos/example.mp4', weights='yolov5s.pt', conf_thres=0.4, device='0')
-        ```
     """
+    # Print debugging information
+    print("Weights path:", weights)
+    print("Weights file exists:", os.path.exists(weights))
+    
     source = str(source)
     save_img = not nosave and not source.endswith(".txt")  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -594,29 +535,27 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
-    rover.set_uart_servo_angle(6, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(5, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(4, 0, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(3, 20, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(2, 90, 5000)
-    time.sleep(0.05)
-    rover.set_uart_servo_angle(1, 90, 5000)
-    time.sleep(0.05)
+    # Initialize rover and reset arm position
+    reset_arm_position()
 
-    global start
-    start = 0
+    # Initialize startup and wifi checking
     startup()
-    detection_number = 1
 
-     
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(device=device), Profile(device=device), Profile(device=device))
+    
+    # Detection number for saving images
+    detection_number = 1
+
+    global start, PauseVariable
+    start = 0
+    start_time = time.time()
+
     for path, im, im0s, vid_cap, s in dataset:
+        # Wait if pause is active
+        while PauseVariable == 1:
+            time.sleep(1)
         
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
@@ -640,28 +579,10 @@ def run(
                 pred = [pred, None]
             else:
                 pred = model(im, augment=augment, visualize=visualize)
+
         # NMS
         with dt[2]:
             pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
-
-        # Second-stage classifier (optional)
-        # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
-
-        # Define the path for the CSV file
-        csv_path = save_dir / "predictions.csv"
-
-        # Create or append to the CSV file
-        def write_to_csv(image_name, prediction, confidence):
-            """Writes prediction data for an image to a CSV file, appending if the file exists."""
-            data = {"Image Name": image_name, "Prediction": prediction, "Confidence": confidence}
-            file_exists = os.path.isfile(csv_path)
-            with open(csv_path, mode="a", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=data.keys())
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerow(data)
-                
-    
 
         # Process predictions
         for i, det in enumerate(pred):  # per image
@@ -679,6 +600,7 @@ def run(
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
+            
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
@@ -688,222 +610,137 @@ def run(
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                # Write results
+                # Process each detection
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)
                     species_name = names[c]
 
+                    # Calculate object distance
                     x_min, y_min, x_max, y_max = xyxy
                     width = x_max - x_min
                     height = y_max - y_min
                     global distance
                     tempdistance = (200 * 0.3) / height
                     distance = tempdistance.item()
+
+                    # Confidence and labeling
                     label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
 
+                    # Save results to CSV if enabled
                     if save_csv:
-                        write_to_csv(p.name, label, confidence_str)
+                        csv_path = save_dir / "predictions.csv"
+                        file_exists = os.path.isfile(csv_path)
+                        with open(csv_path, mode="a", newline="") as f:
+                            writer = csv.writer(f)
+                            if not file_exists:
+                                writer.writerow(["Image Name", "Prediction", "Confidence"])
+                            writer.writerow([p.name, label, confidence_str])
 
-                    if save_txt:  # Write to file
-                        if save_format == 0:
-                            coords = (
-                                (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()
-                            )  # normalized xywh
-                        else:
-                            coords = (torch.tensor(xyxy).view(1, 4) / gn).view(-1).tolist()  # xyxy
-                        line = (cls, *coords, conf) if save_conf else (cls, *coords)  # label format
-                        with open(f"{txt_path}.txt", "a") as f:
-                            f.write(("%g " * len(line)).rstrip() % line + "\n")
-
-                    if save_img or save_crop or view_img:  # Add bbox to image
-                        c = int(cls)  # integer class
+                    # Annotate image
+                    if save_img or save_crop or view_img:
                         label = None if hide_labels else (names[c] if hide_conf else f"{names[c]} {conf:.2f}")
                         annotator.box_label(xyxy, label, color=colors(c, True))
+                    
+                    # Save cropped images if enabled
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / "crops" / names[c] / f"{p.stem}.jpg", BGR=True)
 
-            global PauseVariable
-            while PauseVariable == 1:
-                time.sleep(1)
             # Stream results
             im0 = annotator.result()
             if view_img:
                 if platform.system() == "Linux" and p not in windows:
                     windows.append(p)
-                    cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                    cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
                     cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
                 cv2.imshow(str(p), im0)
-                cv2.waitKey(1)  # 1 millisecond
-                
-            if save_img and len(det) and confidence >= 0.8:  # Only proceed if detections are found and above confidence level
-                if dataset.mode == "stream":  # Handle live stream separately
-                    if start >= 50:  # Save image every 10 seconds
-                        detection_number += 1  # Increment detection number
-                        detection_folder = f"detection_{detection_number}"  # Create folder name
-                        save_path_dir = Path(save_path).parent / detection_folder  # Define directory path
+                cv2.waitKey(1)
 
-                        # Ensure the directory exists
+            # Save detection images
+            if save_img and len(det) and confidence >= 0.8:
+                if dataset.mode == "stream":
+                    if start >= 50:
+                        detection_number += 1
+                        detection_folder = f"detection_{detection_number}"
+                        save_path_dir = Path(save_path).parent / detection_folder
                         os.makedirs(save_path_dir, exist_ok=True)
-
-                        # Save the image inside the new directory
                         save_path_img = str((save_path_dir / Path(save_path).name).with_suffix(".jpg"))
                         cv2.imwrite(save_path_img, im0)
-
-                        # Save to database
                         save_to_db(species_name, save_path_img, confidence)
-
                         print("Time elapsed: ", start)
-                          # Update last saved time
                 else:  # video
-                    if vid_path[i] != save_path:  # new video
+                    if vid_path[i] != save_path:
                         vid_path[i] = save_path
                         if isinstance(vid_writer[i], cv2.VideoWriter):
-                            vid_writer[i].release()  # release previous video writer
-                        if vid_cap:  # video
+                            vid_writer[i].release()
+                        if vid_cap:
                             fps = vid_cap.get(cv2.CAP_PROP_FPS)
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        else:  # default values
+                        else:
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
-                        save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
+                        save_path = str(Path(save_path).with_suffix(".mp4"))
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
+
             start += 1
             print("Timer: ", start)
-            # Print time (inference-only)
-            LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
 
+        # Update log info
+        LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1e3:.1f}ms")
 
-    # Print results
-    t = tuple(x.t / seen * 1e3 for x in dt)  # speeds per image
+    # Print final results
+    t = tuple(x.t / seen * 1e3 for x in dt)
     LOGGER.info(f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}" % t)
+    
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ""
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
+    
     if update:
-        strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
+        strip_optimizer(weights[0])
 
-
-def parse_opt():
+def main(**kwargs):
     """
-    Parse command-line arguments for YOLOv5 detection, allowing custom inference options and model configurations.
-
+    Main function to execute YOLOv5 detection with parsed arguments.
+    
     Args:
-        --weights (str | list[str], optional): Model path or Triton URL. Defaults to ROOT / 'yolov5s.pt'.
-        --source (str, optional): File/dir/URL/glob/screen/0(webcam). Defaults to ROOT / 'data/images'.
-        --data (str, optional): Dataset YAML path. Provides dataset configuration information.
-        --imgsz (list[int], optional): Inference size (height, width). Defaults to [640].
-        --conf-thres (float, optional): Confidence threshold. Defaults to 0.25.
-        --iou-thres (float, optional): NMS IoU threshold. Defaults to 0.45.
-        --max-det (int, optional): Maximum number of detections per image. Defaults to 1000.
-        --device (str, optional): CUDA device, i.e., '0' or '0,1,2,3' or 'cpu'. Defaults to "".
-        --view-img (bool, optional): Flag to display results. Defaults to False.
-        --save-txt (bool, optional): Flag to save results to *.txt files. Defaults to False.
-        --save-csv (bool, optional): Flag to save results in CSV format. Defaults to False.
-        --save-conf (bool, optional): Flag to save confidences in labels saved via --save-txt. Defaults to False.
-        --save-crop (bool, optional): Flag to save cropped prediction boxes. Defaults to False.
-        --nosave (bool, optional): Flag to prevent saving images/videos. Defaults to False.
-        --classes (list[int], optional): List of classes to filter results by, e.g., '--classes 0 2 3'. Defaults to None.
-        --agnostic-nms (bool, optional): Flag for class-agnostic NMS. Defaults to False.
-        --augment (bool, optional): Flag for augmented inference. Defaults to False.
-        --visualize (bool, optional): Flag for visualizing features. Defaults to False.
-        --update (bool, optional): Flag to update all models in the model directory. Defaults to False.
-        --project (str, optional): Directory to save results. Defaults to ROOT / 'runs/detect'.
-        --name (str, optional): Sub-directory name for saving results within --project. Defaults to 'exp'.
-        --exist-ok (bool, optional): Flag to allow overwriting if the project/name already exists. Defaults to False.
-        --line-thickness (int, optional): Thickness (in pixels) of bounding boxes. Defaults to 3.
-        --hide-labels (bool, optional): Flag to hide labels in the output. Defaults to False.
-        --hide-conf (bool, optional): Flag to hide confidences in the output. Defaults to False.
-        --half (bool, optional): Flag to use FP16 half-precision inference. Defaults to False.
-        --dnn (bool, optional): Flag to use OpenCV DNN for ONNX inference. Defaults to False.
-        --vid-stride (int, optional): Video frame-rate stride, determining the number of frames to skip in between
-            consecutive frames. Defaults to 1.
-
-    Returns:
-        argparse.Namespace: Parsed command-line arguments as an argparse.Namespace object.
-
-    Example:
-        ```python
-        from ultralytics import YOLOv5
-        args = YOLOv5.parse_opt()
-        ```
+        **kwargs: Keyword arguments from parse_opt()
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--weights", nargs="+", type=str, default=str(ROOT / "insectmodel/best.pt"), help="model path or triton URL")
-    parser.add_argument("--source", type=str, default=ROOT / "/dev/v4l/by-id/usb-Sonix_Technology_Co.__Ltd._USB_2.0_Camera_SN0001-video-index0", help="file/dir/URL/glob/screen/0(webcam)")
-    parser.add_argument("--pathcam", type=str, default=ROOT / "/dev/v4l/by-id/usb-Sonix_Technology_Co.__Ltd._USB_2.0_Camera-video-index0",   help="file/dir/URL/glob/screen/1(webcam)")
-    parser.add_argument("--data", type=str, default=ROOT / "data/coco128.yaml", help="(optional) dataset.yaml path")
-    parser.add_argument("--imgsz", "--img", "--img-size", nargs="+", type=int, default=[640], help="inference size h,w")
-    parser.add_argument("--conf-thres", type=float, default=0.25, help="confidence threshold")
-    parser.add_argument("--iou-thres", type=float, default=0.45, help="NMS IoU threshold")
-    parser.add_argument("--max-det", type=int, default=1000, help="maximum detections per image")
-    parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
-    parser.add_argument("--view-img", action="store_true", help="show results")
-    parser.add_argument("--save-txt", action="store_true", help="save results to *.txt")
-    parser.add_argument(
-        "--save-format",
-        type=int,
-        default=0,
-        help="whether to save boxes coordinates in YOLO format or Pascal-VOC format when save-txt is True, 0 for YOLO and 1 for Pascal-VOC",
-    )
-    parser.add_argument("--save-csv", action="store_true", help="save results in CSV format")
-    parser.add_argument("--save-conf", action="store_true", help="save confidences in --save-txt labels")
-    parser.add_argument("--save-crop", action="store_true", help="save cropped prediction boxes")
-    parser.add_argument("--nosave", action="store_true", help="do not save images/videos")
-    parser.add_argument("--classes", nargs="+", type=int, help="filter by class: --classes 0, or --classes 0 2 3")
-    parser.add_argument("--agnostic-nms", action="store_true", help="class-agnostic NMS")
-    parser.add_argument("--augment", action="store_true", help="augmented inference")
-    parser.add_argument("--visualize", action="store_true", help="visualize features")
-    parser.add_argument("--update", action="store_true", help="update all models")
-    parser.add_argument("--project", default=ROOT / "runs/detect", help="save results to project/name")
-    parser.add_argument("--name", default="exp", help="save results to project/name")
-    parser.add_argument("--exist-ok", action="store_true", help="existing project/name ok, do not increment")
-    parser.add_argument("--line-thickness", default=3, type=int, help="bounding box thickness (pixels)")
-    parser.add_argument("--hide-labels", default=False, action="store_true", help="hide labels")
-    parser.add_argument("--hide-conf", default=False, action="store_true", help="hide confidences")
-    parser.add_argument("--half", action="store_true", help="use FP16 half-precision inference")
-    parser.add_argument("--dnn", action="store_true", help="use OpenCV DNN for ONNX inference")
-    parser.add_argument("--vid-stride", type=int, default=1, help="video frame-rate stride")
-    opt = parser.parse_args()
-    opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
-    print_args(vars(opt))
-    return opt
-
-
-
-
-def main(opt):
-    """
-    Executes YOLOv5 model inference based on provided command-line arguments, validating dependencies before running.
-
-    Args:
-        opt (argparse.Namespace): Command-line arguments for YOLOv5 detection. See function `parse_opt` for details.
-
-    Returns:
-        None
-
-    Note:
-        This function performs essential pre-execution checks and initiates the YOLOv5 detection process based on user-specified
-        options. Refer to the usage guide and examples for more information about different sources and formats at:
-        https://github.com/ultralytics/ultralytics
-
-    Example usage:
-
-    ```python
-    if __name__ == "__main__":
-        opt = parse_opt()
-        main(opt)
-    ```
-    """
+    # Print debugging information
+    print("Main function called with kwargs:")
+    for key, value in kwargs.items():
+        print(f"{key}: {value}")
+    
+    # Check and install requirements
     check_requirements(ROOT / "requirements.txt", exclude=("tensorboard", "thop"))
-    run(**vars(opt))
+    
+    # Run detection
+    run(**kwargs)
 
 if __name__ == "__main__":
-    # Start background thread for wifi check
-    wifi_thread = threading.Thread(target=check_wifi, daemon=True)
-    wifi_thread.start()
+    try:
+        # Print additional debugging information
+        print("Current Working Directory:", os.getcwd())
+        print("Script Location:", os.path.dirname(os.path.abspath(__file__)))
+        print("Python Path:", sys.path)
+        
+        # Start background wifi checking thread
+        wifi_thread = threading.Thread(target=check_wifi_thread, daemon=True)
+        wifi_thread.start()
+        
+        # Parse options 
+        from config import parse_opt
+        opt = parse_opt()
+        
+        # Convert Namespace to dictionary and pass to main
+        main(**vars(opt))
     
-    opt = parse_opt()
-    main(opt)
+    except Exception as e:
+        print(f"Unexpected error in main execution: {e}")
+        traceback.print_exc()
+    finally:
+        # Ensure rover stops and arms are reset
+        stop_moving()
+        reset_arm_position()

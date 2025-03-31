@@ -3,12 +3,10 @@ import sys
 import argparse
 from pathlib import Path
 
-# File and root path configuration
+# Determine the project root directory
 FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]  # Assumes config.py is in a subdirectory
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))
+ROOT = FILE.parents[0]  # Yolov5Detect directory
+PROJECT_ROOT = ROOT.parent  # insect-identification directory
 
 # Global constants
 MIN_CONFIDENCE = 70  # Minimum confidence threshold for detections
@@ -45,7 +43,6 @@ SPECIES_MAPPING = {
     "staghorn sumac": "Rhus typhina",
 }
 
-
 def parse_opt():
     """
     Parse command-line arguments for YOLOv5 detection inference.
@@ -53,15 +50,32 @@ def parse_opt():
     Returns:
         argparse.Namespace: Parsed command-line options.
     """
+    # Potential model paths
+    potential_paths = [
+        Path(__file__).parent.parent / 'insectmodel/best.pt',
+        Path.home() / 'insect-identification/insectmodel/best.pt',
+        Path.cwd() / '../insectmodel/best.pt',
+        Path.cwd() / 'best.pt'
+    ]
+    
+    # Find the first existing model path
+    model_path = next((str(path.resolve()) for path in potential_paths if path.exists()), None)
+    
+    # Create a default images directory if it doesn't exist
+    default_source_dir = Path(__file__).parent / 'data/images'
+    default_source_dir.mkdir(parents=True, exist_ok=True)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--weights", nargs="+", type=str, default=str(ROOT / "insectmodel/best.pt"),
-                        help="model path or triton URL")
-    parser.add_argument("--source", type=str, default=str(ROOT / "0"),
-                        help="file/dir/URL/glob/screen/0(webcam)")
+    parser.add_argument("--weights", nargs="+", type=str, 
+        default=model_path,
+        help="model path or triton URL")
+    parser.add_argument("--source", type=str, 
+        default=str(default_source_dir), 
+        help="file/dir/URL/glob/screen/0(webcam)")
     parser.add_argument("--data", type=str, default=str(ROOT / "data/coco128.yaml"),
-                        help="dataset.yaml path")
+        help="dataset.yaml path")
     parser.add_argument("--imgsz", "--img", "--img-size", nargs="+", type=int, default=[640],
-                        help="inference size h,w")
+        help="inference size h,w")
     parser.add_argument("--conf-thres", type=float, default=0.25, help="confidence threshold")
     parser.add_argument("--iou-thres", type=float, default=0.45, help="NMS IoU threshold")
     parser.add_argument("--max-det", type=int, default=1000, help="maximum detections per image")
@@ -69,7 +83,7 @@ def parse_opt():
     parser.add_argument("--view-img", action="store_true", help="show results")
     parser.add_argument("--save-txt", action="store_true", help="save results to *.txt")
     parser.add_argument("--save-format", type=int, default=0,
-                        help="save boxes coordinates in YOLO (0) or Pascal-VOC (1) format")
+        help="save boxes coordinates in YOLO (0) or Pascal-VOC (1) format")
     parser.add_argument("--save-csv", action="store_true", help="save results in CSV format")
     parser.add_argument("--save-conf", action="store_true", help="save confidences in labels")
     parser.add_argument("--save-crop", action="store_true", help="save cropped prediction boxes")
@@ -93,4 +107,6 @@ def parse_opt():
     # If only one size is provided, duplicate it for height and width
     if len(opt.imgsz) == 1:
         opt.imgsz *= 2
-    return opt
+    return opt  # Return the modified opt instead of parsing args again
+
+
